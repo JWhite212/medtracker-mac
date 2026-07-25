@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- App Sandbox: ON. Mandatory for the Mac App Store; harmless for the spike. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+
+	<!-- Outbound network, for the /api/v1 login + sync round-trip (Test E). -->
+	<key>com.apple.security.network.client</key>
+	<true/>
+
+	<!-- NOTE: The Time-Sensitive notifications entitlement
+	     (com.apple.developer.usernotifications.time-sensitive) is deliberately
+	     NOT in this default file, because a FREE Apple ID cannot provision it and
+	     adding it here would break automatic signing for Tests A–C/E. It's only
+	     needed for the optional Test D — add it there via Xcode's
+	     "Signing & Capabilities → + Capability → Time Sensitive Notifications"
+	     (self-service; requires a paid Developer account), which regenerates this
+	     file with the key for you. -->
+</dict>
+</plist>

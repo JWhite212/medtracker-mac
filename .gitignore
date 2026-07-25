@@ -1,0 +1,17 @@
+# Xcode / Swift
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+.DS_Store
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# The generated Xcode project (you create this locally via the wizard per
+# SETUP.md; the source files in Spike/ are the durable part of this repo).
+# Delete the next two lines once you commit a real project you want tracked.
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
