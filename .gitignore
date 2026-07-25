@@ -15,3 +15,6 @@ xcuserdata/
 # Delete the next two lines once you commit a real project you want tracked.
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
+
+# XcodeGen output: track the project, not per-user state
+*.xcodeproj/project.xcworkspace/xcuserdata/

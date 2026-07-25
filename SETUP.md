@@ -9,6 +9,15 @@ Time: ~20–30 minutes. You need a Mac, Xcode 16+ (macOS 15 SDK or newer), and a
 added to Xcode (a **free** Apple ID works for local run; your paid Developer account is only
 needed later for the App Store — and for the optional Test D entitlement).
 
+> **⚡ Already generated + built for you.** The Xcode project is committed
+> (`MedTrackerSpike.xcodeproj`, produced from `project.yml` via
+> [XcodeGen](https://github.com/yonaskolb/XcodeGen)), and an ad-hoc-signed, runnable
+> `MedTrackerSpike.app` was already built. **To just run it now:** open the project
+> (`open MedTrackerSpike.xcodeproj`) and press ⌘R, or launch the prebuilt app with
+> `open build/Build/Products/Debug/MedTrackerSpike.app`, then **skip to Step 4 (the tests)**.
+> Steps 1–3 below are the from-scratch/Xcode-wizard path, kept as a reference and for when you
+> want to regenerate (`xcodegen generate`) or set your own signing team.
+
 ---
 
 ## Step 1 — Create the Xcode project

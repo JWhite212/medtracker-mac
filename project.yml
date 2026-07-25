@@ -1,0 +1,31 @@
+name: MedTrackerSpike
+
+options:
+  bundleIdPrefix: com.jamiewhite
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+
+targets:
+  MedTrackerSpike:
+    type: application
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: Spike
+        excludes:
+          - "MedTrackerSpike.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jamiewhite.MedTrackerSpike
+        PRODUCT_NAME: MedTrackerSpike
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_ENTITLEMENTS: Spike/MedTrackerSpike.entitlements
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        # A normal windowed app (not a menu-bar agent) for the spike.
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.medical
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
