@@ -111,3 +111,14 @@ public enum TimeOfDayBucket: Equatable, Hashable, CaseIterable {
     case evening
     case night
 }
+
+// MARK: - Refill severity
+
+/// Mirrors the TS `RefillSeverity` union (`"critical" | "warning" | "watch" |
+/// "ok"`, `src/lib/server/inventory.ts` / `src/lib/types`).
+public enum RefillSeverity: Equatable, Hashable {
+    case critical
+    case warning
+    case watch
+    case ok
+}
