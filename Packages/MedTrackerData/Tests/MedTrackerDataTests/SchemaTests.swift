@@ -131,6 +131,26 @@ struct SchemaTests {
         }
     }
 
+    @Test func checkConstraint_rejectsPrnRowWithDaysOfWeekSet() throws {
+        let dbQueue = try MedTrackerDatabase.open()
+        try dbQueue.write { db in try makeMedication().insert(db) }
+
+        #expect(throws: (any Error).self) {
+            try dbQueue.write { db in
+                let invalid = MedicationSchedule(
+                    id: "sched_bad",
+                    medicationId: "med_1",
+                    userId: "user_1",
+                    scheduleKind: "prn",
+                    daysOfWeek: [1, 2],
+                    effectiveFrom: now,
+                    createdAt: now
+                )
+                try invalid.insert(db)
+            }
+        }
+    }
+
     @Test func checkConstraint_acceptsAllThreeValidShapes() throws {
         let dbQueue = try MedTrackerDatabase.open()
         try dbQueue.write { db in try makeMedication().insert(db) }
@@ -186,6 +206,25 @@ struct SchemaTests {
             try String.fetchOne(db, sql: "SELECT localDate(?, ?)", arguments: [epoch, "America/New_York"])
         }
         #expect(localDate == "2026-03-08")
+    }
+
+    @Test func localDate_discriminatesConstantOffsetBugBeforeSpringForward() throws {
+        let dbQueue = try MedTrackerDatabase.open()
+
+        // 2026-03-08 04:30Z is 2026-03-07 23:30 EST (America/New_York is
+        // still UTC-5 here — the spring-forward 02:00→03:00 jump happens
+        // at 07:00Z). A correct DST-aware implementation resolves this to
+        // "2026-03-07". A buggy constant-offset (-4h, i.e. EDT-only)
+        // implementation would wrongly compute 00:30 and resolve to
+        // "2026-03-08" instead — this is the test that would actually
+        // catch that class of bug, unlike the two above which land on the
+        // same calendar date under both the correct and buggy math.
+        let epoch = ISO8601DateFormatter().date(from: "2026-03-08T04:30:00Z")!.timeIntervalSince1970
+
+        let localDate = try dbQueue.read { db in
+            try String.fetchOne(db, sql: "SELECT localDate(?, ?)", arguments: [epoch, "America/New_York"])
+        }
+        #expect(localDate == "2026-03-07")
     }
 
     // MARK: - 4. ON DELETE CASCADE

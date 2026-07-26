@@ -79,7 +79,7 @@ public enum Migrations {
     /// `medication_schedules`, `schema.ts:144-170`):
     /// - `interval`   → `interval_hours` present, `time_of_day` absent
     /// - `fixed_time` → `time_of_day` present, `interval_hours` absent
-    /// - `prn`        → both absent
+    /// - `prn`        → `interval_hours`, `time_of_day`, and `days_of_week` all absent
     private static func createMedicationScheduleTable(_ db: Database) throws {
         try db.create(table: MedicationSchedule.databaseTableName) { t in
             t.primaryKey("id", .text)
@@ -100,7 +100,7 @@ public enum Migrations {
             CHECK (
                 (schedule_kind = 'interval' AND interval_hours IS NOT NULL AND time_of_day IS NULL)
                 OR (schedule_kind = 'fixed_time' AND time_of_day IS NOT NULL AND interval_hours IS NULL)
-                OR (schedule_kind = 'prn' AND interval_hours IS NULL AND time_of_day IS NULL)
+                OR (schedule_kind = 'prn' AND interval_hours IS NULL AND time_of_day IS NULL AND days_of_week IS NULL)
             )
             """)
         }
@@ -252,6 +252,9 @@ public enum Migrations {
             t.column("time_format", .text).notNull().defaults(to: "12h")
             t.column("ui_density", .text).notNull().defaults(to: "comfortable")
             t.column("reduced_motion", .boolean).notNull().defaults(to: false)
+            // Collapsed-default toggles: native has a single notification channel
+            // (design spec §10.1), so both default to true — matching the web's
+            // EMAIL-channel defaults (also both true) rather than diverging per-channel.
             t.column("overdue_reminders_enabled", .boolean).notNull().defaults(to: true)
             t.column("low_inventory_alerts_enabled", .boolean).notNull().defaults(to: true)
             t.column("dose_log_page_size", .integer).notNull().defaults(to: 20)
