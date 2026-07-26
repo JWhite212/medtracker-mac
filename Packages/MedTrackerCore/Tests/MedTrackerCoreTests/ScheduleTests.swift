@@ -541,6 +541,48 @@ private let fallBackDayEnd = fallBackDayStart.addingTimeInterval(24 * 3600)
     #expect(flattenSorted(excluded).isEmpty)
 }
 
+// MARK: - In-band DST slots that DIVERGE from the web's localTimeOnDateToUtc
+//
+// See docs/PARITY-DIVERGENCES.md entry #4. These two local times fall inside
+// the bands where the web's offset-subtraction (localTimeOnDateToUtc) is off
+// by one hour relative to Foundation's DST-correct Calendar.date(from:):
+//   - spring-forward day (2026-03-08) local 03:00–06:59 → web is +1h
+//   - fall-back day     (2026-11-01) local 02:00–05:59 → web is −1h
+// Foundation is correct; we keep it. The asserted instants below are what
+// Foundation actually returns and are the intended (divergent) behavior.
+
+@Test func dstFixedTime_0600_springForward_inBand_divergesFromWeb() {
+    let result = computeScheduleSlots(
+        medications: ["med-1"],
+        schedulesByMedId: ["med-1": [fixedTimeSchedule("06:00")]],
+        todaysDoses: [], lastTakenByMed: [:],
+        dayStart: springForwardDayStart, dayEnd: springForwardDayEnd, timeZone: nyc,
+        now: springForwardDayStart
+    )
+    let slots = flattenSorted(result)
+    #expect(slots.count == 1)
+    // 06:00 local on 03-08 is after the 02:00→03:00 jump, so EDT (offset -4):
+    // 06:00 + 4 = 10:00Z. The web's localTimeOnDateToUtc would compute
+    // 2026-03-08T11:00:00Z here (+1h) — Foundation's 10:00Z is correct.
+    #expect(slots[0].expectedTime == d("2026-03-08T10:00:00Z"))
+}
+
+@Test func dstFixedTime_0530_fallBack_inBand_divergesFromWeb() {
+    let result = computeScheduleSlots(
+        medications: ["med-1"],
+        schedulesByMedId: ["med-1": [fixedTimeSchedule("05:30")]],
+        todaysDoses: [], lastTakenByMed: [:],
+        dayStart: fallBackDayStart, dayEnd: fallBackDayEnd, timeZone: nyc,
+        now: fallBackDayStart
+    )
+    let slots = flattenSorted(result)
+    #expect(slots.count == 1)
+    // 05:30 local on 11-01 is after the 02:00→01:00 rollback, so EST (offset
+    // -5): 05:30 + 5 = 10:30Z. The web's localTimeOnDateToUtc would compute
+    // 2026-11-01T09:30:00Z here (−1h) — Foundation's 10:30Z is correct.
+    #expect(slots[0].expectedTime == d("2026-11-01T10:30:00Z"))
+}
+
 @Test func dstWeeklyDaysOfWeek_fallBackSunday_includedVsExcluded() {
     let included = computeScheduleSlots(
         medications: ["med-1"],

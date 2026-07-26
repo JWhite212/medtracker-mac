@@ -48,7 +48,7 @@ public func overusePercent(taken: Int, expected: Int) -> Double {
 
 /// Mirrors the TS `calculateTrend` return union's `direction` field
 /// (`"up" | "down" | "flat"`, `analytics.ts:66-76`).
-public enum TrendDirection: Equatable, Hashable {
+public enum TrendDirection: Equatable, Hashable, Sendable {
     case up
     case down
     case flat

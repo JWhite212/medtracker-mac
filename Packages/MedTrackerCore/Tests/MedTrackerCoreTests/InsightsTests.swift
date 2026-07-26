@@ -115,6 +115,24 @@ private func makeInputs(
     #expect(worstDay?.text.contains("Saturday") == true)
 }
 
+@Test func buildInsights_worstDayWithOutOfRangeDayOfWeek_doesNotCrashAndOmitsInsight() {
+    // dayOfWeek is documented 0–6 but caller-supplied; a value of 7 would be
+    // an out-of-bounds index into the 7-element day-label array (a hard Swift
+    // trap). Six in-range days plus one dow=7 bucket clears the >= 7-total
+    // gate, and the dow=7 bucket is the worst (count 0) — so without the
+    // bounds guard this would crash. With it, the insight is simply omitted.
+    let insights = buildInsights(makeInputs(dayOfWeek: [
+        DayOfWeekCount(dayOfWeek: 0, count: 5),
+        DayOfWeekCount(dayOfWeek: 1, count: 5),
+        DayOfWeekCount(dayOfWeek: 2, count: 5),
+        DayOfWeekCount(dayOfWeek: 3, count: 5),
+        DayOfWeekCount(dayOfWeek: 4, count: 5),
+        DayOfWeekCount(dayOfWeek: 5, count: 5),
+        DayOfWeekCount(dayOfWeek: 7, count: 0), // out of range — must not crash
+    ]))
+    #expect(insights.first { $0.id == "worst-day" } == nil)
+}
+
 @Test func buildInsights_doesNotEmitWorstDayWhenDistributionIsRoughlyEven() {
     let insights = buildInsights(makeInputs(
         dayOfWeek: (0 ..< 7).map { DayOfWeekCount(dayOfWeek: $0, count: 4) }

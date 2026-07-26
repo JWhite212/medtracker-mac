@@ -2,12 +2,13 @@ import Foundation
 
 // MARK: - Calendar helper
 
-/// A proleptic-Gregorian calendar pinned to `timeZone`. All of the date math
-/// in this file goes through this so that DST gaps and ambiguous hours are
-/// resolved by Foundation's native, DST-correct primitives
-/// (`Calendar.startOfDay(for:)`, `Calendar.date(from:)`, component extraction)
-/// rather than by the `Intl`-offset-subtraction arithmetic the TS port uses.
-private func gregorianCalendar(_ timeZone: TimeZone) -> Calendar {
+/// A proleptic-Gregorian calendar pinned to `timeZone`. The single shared
+/// factory used across `MedTrackerCore` (`Time`, `Schedule`, `Reminders`) so
+/// DST gaps and ambiguous hours are resolved by Foundation's native,
+/// DST-correct primitives (`Calendar.startOfDay(for:)`, `Calendar.date(from:)`,
+/// component extraction) rather than by the `Intl`-offset-subtraction
+/// arithmetic the TS port uses.
+func gregorianCalendar(_ timeZone: TimeZone) -> Calendar {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = timeZone
     return calendar

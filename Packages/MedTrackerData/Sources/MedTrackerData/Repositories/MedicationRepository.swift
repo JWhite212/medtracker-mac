@@ -97,9 +97,11 @@ public struct MedicationScheduleInput: Equatable {
 public struct MedicationRepository {
     private let dbWriter: any DatabaseWriter
 
-    /// Test-only fault injection — see `DoseRepository.testFaultAfterMutation`
-    /// for the contract. Never set outside `RepositoryTests.swift`.
-    var testFaultAfterMutation: (() throws -> Void)?
+    #if DEBUG
+        /// Test-only fault injection — see `DoseRepository.testFaultAfterMutation`
+        /// for the contract. Never set outside `RepositoryTests.swift`.
+        var testFaultAfterMutation: (() throws -> Void)?
+    #endif
 
     public init(dbWriter: any DatabaseWriter) {
         self.dbWriter = dbWriter
@@ -158,7 +160,9 @@ public struct MedicationRepository {
                 createdAt: nowEpoch
             ).insert(db)
 
-            try testFaultAfterMutation?()
+            #if DEBUG
+                try testFaultAfterMutation?()
+            #endif
 
             return med
         }
@@ -185,7 +189,7 @@ public struct MedicationRepository {
         now: Date = Date()
     ) throws -> Medication? {
         try dbWriter.write { db in
-            guard var existing = try Self.fetchOwnedMedication(db, userId: userId, medicationId: medicationId) else {
+            guard var existing = try Medication.fetchOwned(db, userId: userId, id: medicationId) else {
                 return nil
             }
             let before = existing
@@ -230,7 +234,9 @@ public struct MedicationRepository {
                 ).insert(db)
             }
 
-            try testFaultAfterMutation?()
+            #if DEBUG
+                try testFaultAfterMutation?()
+            #endif
 
             return existing
         }
@@ -240,12 +246,13 @@ public struct MedicationRepository {
 
     /// Ports `archiveMedication` (`medications.ts:276-284`). Sets
     /// `isArchived = true`, stamps `archivedAt`/`updatedAt`, and appends an
-    /// `update` audit row recording the `isArchived` transition. Returns
-    /// `false` without any side effect when the medication doesn't exist —
-    /// a deliberate strengthening over the TS, which issues an unconditional
-    /// blind `UPDATE` + audit row even for a non-existent/non-owned id (a
-    /// latent quirk of the web version, not reproduced here; see the
-    /// task report for details).
+    /// `update` audit row recording the **real** prior `isArchived` value.
+    /// Returns `false` without any side effect when the medication doesn't
+    /// exist — two deliberate strengthenings over the TS, which issues an
+    /// unconditional blind `UPDATE` + audit row even for a
+    /// non-existent/non-owned id AND hardcodes the audit `from` value
+    /// (`false`) instead of reading the row's actual prior state. See
+    /// `docs/PARITY-DIVERGENCES.md` entry #3.
     @discardableResult
     public func archiveMedication(userId: String, medicationId: String, now: Date = Date()) throws -> Bool {
         try setArchived(userId: userId, medicationId: medicationId, isArchived: true, now: now)
@@ -259,7 +266,7 @@ public struct MedicationRepository {
 
     private func setArchived(userId: String, medicationId: String, isArchived: Bool, now: Date) throws -> Bool {
         try dbWriter.write { db in
-            guard var med = try Self.fetchOwnedMedication(db, userId: userId, medicationId: medicationId) else {
+            guard var med = try Medication.fetchOwned(db, userId: userId, id: medicationId) else {
                 return false
             }
             let wasArchived = med.isArchived
@@ -280,7 +287,9 @@ public struct MedicationRepository {
                 createdAt: nowEpoch
             ).insert(db)
 
-            try testFaultAfterMutation?()
+            #if DEBUG
+                try testFaultAfterMutation?()
+            #endif
 
             return true
         }
@@ -288,24 +297,37 @@ public struct MedicationRepository {
 
     // MARK: - Helpers
 
-    private static func fetchOwnedMedication(_ db: Database, userId: String, medicationId: String) throws -> Medication? {
-        try Medication.filter(key: medicationId).filter(Column("user_id") == userId).fetchOne(db)
-    }
-
+    /// Builds one persistable schedule row, normalizing the per-kind field
+    /// shape exactly like the web's `buildScheduleRows` (`schedules.ts:60-78`):
+    /// `time_of_day` is kept only on `fixed_time` rows, `interval_hours` only
+    /// on `interval` rows, and `days_of_week` only on `fixed_time` rows with a
+    /// non-empty array (an empty `[]` normalizes to `nil` → stored as SQL
+    /// NULL). Any stray field carried on the wrong kind is dropped here rather
+    /// than tripping the 3-way discriminated-union `CHECK` in `Migrations.swift`.
     private static func makeSchedule(
         medicationId: String,
         userId: String,
         input: MedicationScheduleInput,
         createdAt: Double
     ) -> MedicationSchedule {
-        MedicationSchedule(
+        let isFixedTime = input.scheduleKind == "fixed_time"
+        let isInterval = input.scheduleKind == "interval"
+
+        let normalizedTimeOfDay = isFixedTime ? input.timeOfDay : nil
+        let normalizedIntervalHours = isInterval ? input.intervalHours : nil
+        let normalizedDaysOfWeek: [Int]? = {
+            guard isFixedTime, let days = input.daysOfWeek, !days.isEmpty else { return nil }
+            return days
+        }()
+
+        return MedicationSchedule(
             id: createId(),
             medicationId: medicationId,
             userId: userId,
             scheduleKind: input.scheduleKind,
-            timeOfDay: input.timeOfDay,
-            intervalHours: input.intervalHours,
-            daysOfWeek: input.daysOfWeek,
+            timeOfDay: normalizedTimeOfDay,
+            intervalHours: normalizedIntervalHours,
+            daysOfWeek: normalizedDaysOfWeek,
             sortOrder: input.sortOrder,
             effectiveFrom: input.effectiveFrom.timeIntervalSince1970,
             effectiveTo: input.effectiveTo?.timeIntervalSince1970,
@@ -313,10 +335,14 @@ public struct MedicationRepository {
         )
     }
 
-    /// Minimal JSON-diff over the editable medication fields. Ports the
-    /// intent of `computeChanges` (`audit.ts:19-28`) — `nil` when nothing
-    /// changed, so `updateMedicationWithSchedules` never writes a no-op
-    /// audit row.
+    /// Minimal JSON-diff over the user-facing medication fields (deliberately
+    /// **excluding** `updatedAt`), returning `nil` when none of them changed so
+    /// `updateMedicationWithSchedules` gates the `update` audit row on a real
+    /// change. This is an INTENTIONAL divergence from the web's
+    /// `computeChanges` (`audit.ts:19-28`), whose `Object.keys(after)` loop
+    /// always sees the freshly-bumped `updatedAt` and therefore always writes
+    /// an audit row (even for a no-op edit). See
+    /// `docs/PARITY-DIVERGENCES.md` entry #2.
     private static func computeChanges(before: Medication, after: Medication) -> String? {
         var changed: [String: [String: Any]] = [:]
 
@@ -345,7 +371,9 @@ public struct MedicationRepository {
         diffOptionalInt("inventoryAlertThreshold", before.inventoryAlertThreshold, after.inventoryAlertThreshold)
 
         guard !changed.isEmpty else { return nil }
-        guard let data = try? JSONSerialization.data(withJSONObject: changed) else { return nil }
+        guard let data = try? JSONSerialization.data(withJSONObject: changed, options: [.sortedKeys]) else {
+            return nil
+        }
         return String(data: data, encoding: .utf8)
     }
 }
