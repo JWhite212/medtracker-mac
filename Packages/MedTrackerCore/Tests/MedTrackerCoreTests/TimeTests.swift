@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerCore
+import Testing
 
 // Ports the in-scope cases of `tests/unit/time.test.ts`.
 //
@@ -60,8 +60,8 @@ private let now = d("2026-04-15T14:30:00Z")
 
 @Test func formatDueIn_dueNowForNearZero() {
     #expect(formatDueIn(msUntilDue: 0) == "Due now")
-    #expect(formatDueIn(msUntilDue: 30_000) == "Due now")   // 30 seconds
-    #expect(formatDueIn(msUntilDue: -30_000) == "Due now")  // -30 seconds
+    #expect(formatDueIn(msUntilDue: 30_000) == "Due now") // 30 seconds
+    #expect(formatDueIn(msUntilDue: -30_000) == "Due now") // -30 seconds
 }
 
 @Test func formatDueIn_positiveMs() {
@@ -115,7 +115,7 @@ private let now = d("2026-04-15T14:30:00Z")
 
 @Test func startOfDay_springForwardDay() {
     // 2026-03-08 is a 23-hour day in NYC. Local midnight is still well-defined.
-    let noonUTC = d("2026-03-08T17:00:00Z")  // ~13:00 EDT, i.e. midday on 03-08
+    let noonUTC = d("2026-03-08T17:00:00Z") // ~13:00 EDT, i.e. midday on 03-08
     let sod = startOfDay(noonUTC, timeZone: nyc)
     #expect(localDateString(sod, timeZone: nyc) == "2026-03-08")
     // Local midnight 2026-03-08 00:00 is still EST (offset -5) = 05:00 UTC.
@@ -125,7 +125,7 @@ private let now = d("2026-04-15T14:30:00Z")
 
 @Test func startOfDay_fallBackDay() {
     // 2026-11-01 is a 25-hour day in NYC (clocks fall back 02:00→01:00).
-    let afternoonUTC = d("2026-11-01T17:00:00Z")  // ~13:00 EDT (pre-rollback), midday on 11-01
+    let afternoonUTC = d("2026-11-01T17:00:00Z") // ~13:00 EDT (pre-rollback), midday on 11-01
     let sod = startOfDay(afternoonUTC, timeZone: nyc)
     #expect(localDateString(sod, timeZone: nyc) == "2026-11-01")
     // Local midnight 2026-11-01 00:00 is still EDT (offset -4) = 04:00 UTC.
@@ -158,8 +158,8 @@ private let now = d("2026-04-15T14:30:00Z")
 @Test func jsRound_halfUpTowardPositiveInfinity() {
     #expect(jsRound(2.5) == 3)
     #expect(jsRound(2.4) == 2)
-    #expect(jsRound(-0.5) == 0)   // JS: 0, not -1
-    #expect(jsRound(-2.5) == -2)  // JS: -2, not -3
+    #expect(jsRound(-0.5) == 0) // JS: 0, not -1
+    #expect(jsRound(-2.5) == -2) // JS: -2, not -3
     #expect(jsRound(0.5) == 1)
     #expect(jsRound(-1.5) == -1)
 }

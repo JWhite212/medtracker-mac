@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerCore
+import Testing
 
 // Ports `tests/unit/schedule.test.ts` (all cases) plus the `computeTimingStatus`
 // cases from `tests/unit/time.test.ts` (deferred to this task per Task 3's
@@ -292,6 +292,68 @@ private let mixedDayEnd = d("2026-04-17T00:00:00Z")
         d("2026-04-16T08:00:00.000Z"),
         d("2026-04-16T12:00:00.000Z"),
     ])
+}
+
+// MARK: - computeScheduleSlots — multi-medication isolation (ADDED — Task 12,
+// closes the per-medication grouping-isolation gap the Task 4 review flagged;
+// not present in schedule.test.ts).
+//
+// med-A gets an interval(8) schedule (no prior dose => slots at 00:00, 08:00,
+// 16:00, mirroring `interval_8h_noPriorDoses_produces3Slots`); med-B gets a
+// fixed_time schedule at 08:00 and 20:00 (mirroring
+// `fixedTime_producesOneSlotPerTimeOfDayRow`). Both meds therefore have an
+// expected instant at the *same* 08:00 timestamp, and each gets its own dose
+// logged at exactly that instant — a deliberately adversarial setup: if dose
+// matching or slot grouping ever leaked across medications, med-A's 08:00
+// slot could latch onto med-B's dose (or vice versa) since the timestamps
+// collide exactly.
+
+@Test func multiMedication_dosesAndSlotsStayIsolatedPerMedication() {
+    let now = d("2026-04-16T10:00:00Z")
+    let doseA = dose(id: "dose-A1", medicationId: "med-A", takenAt: d("2026-04-16T08:00:00Z"))
+    let doseB = dose(id: "dose-B1", medicationId: "med-B", takenAt: d("2026-04-16T08:00:00Z"))
+
+    let result = computeScheduleSlots(
+        medications: ["med-A", "med-B"],
+        schedulesByMedId: [
+            "med-A": [intervalSchedule(8)],
+            "med-B": [fixedTimeSchedule("08:00"), fixedTimeSchedule("20:00")],
+        ],
+        todaysDoses: [doseA, doseB],
+        lastTakenByMed: [:],
+        dayStart: mixedDayStart, dayEnd: mixedDayEnd, timeZone: utc, now: now
+    )
+
+    // Each key holds only its own medication's slots.
+    #expect(result.keys.sorted() == ["med-A", "med-B"])
+    #expect(result["med-A"]!.allSatisfy { $0.medicationId == "med-A" })
+    #expect(result["med-B"]!.allSatisfy { $0.medicationId == "med-B" })
+
+    // med-A: interval(8) with no prior dose => 00:00 (overdue, before now),
+    // 08:00 (matched to its own dose), 16:00 (upcoming).
+    let medASlots = result["med-A"]!.sorted { $0.expectedTime < $1.expectedTime }
+    #expect(medASlots.count == 3)
+    #expect(medASlots[0].expectedTime == d("2026-04-16T00:00:00.000Z"))
+    #expect(medASlots[0].status == .overdue)
+    #expect(medASlots[1].expectedTime == d("2026-04-16T08:00:00.000Z"))
+    #expect(medASlots[1].status == .taken)
+    #expect(medASlots[1].matchedDoseId == "dose-A1")
+    #expect(medASlots[2].expectedTime == d("2026-04-16T16:00:00.000Z"))
+    #expect(medASlots[2].status == .upcoming)
+
+    // med-B: fixed_time 08:00 (matched to its own dose) + 20:00 (upcoming).
+    let medBSlots = result["med-B"]!.sorted { $0.expectedTime < $1.expectedTime }
+    #expect(medBSlots.count == 2)
+    #expect(medBSlots[0].expectedTime == d("2026-04-16T08:00:00.000Z"))
+    #expect(medBSlots[0].status == .taken)
+    #expect(medBSlots[0].matchedDoseId == "dose-B1")
+    #expect(medBSlots[1].expectedTime == d("2026-04-16T20:00:00.000Z"))
+    #expect(medBSlots[1].status == .upcoming)
+
+    // No cross-medication dose leakage: med-A's dose never matches a med-B
+    // slot and vice versa, despite both doses sharing the same instant.
+    #expect(!result["med-A"]!.contains { $0.matchedDoseId == "dose-B1" })
+    #expect(!result["med-B"]!.contains { $0.matchedDoseId == "dose-A1" })
 }
 
 // MARK: - groupSlotsByTimeOfDay (verbatim from schedule.test.ts)

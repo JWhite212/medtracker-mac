@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerCore
+import Testing
 
 // Transcribes the `describe("buildInsights", ...)` block from
 // `tests/unit/analytics.test.ts:137-283`, plus one additional case (at the
@@ -117,7 +117,7 @@ private func makeInputs(
 
 @Test func buildInsights_doesNotEmitWorstDayWhenDistributionIsRoughlyEven() {
     let insights = buildInsights(makeInputs(
-        dayOfWeek: (0..<7).map { DayOfWeekCount(dayOfWeek: $0, count: 4) }
+        dayOfWeek: (0 ..< 7).map { DayOfWeekCount(dayOfWeek: $0, count: 4) }
     ))
     #expect(insights.first { $0.id == "worst-day" } == nil)
 }

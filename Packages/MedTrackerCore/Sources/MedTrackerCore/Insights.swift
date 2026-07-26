@@ -154,26 +154,6 @@ private let dayLabelFull: [String] = [
     "Saturday",
 ]
 
-// MARK: - JS-style number-to-string
-
-/// Renders a `Double` the way a JS template literal (`${x}`) would: whole
-/// values print with no trailing `.0` (`15` not `15.0`), matching
-/// `Number.prototype.toString()`. Non-whole values fall through to Swift's
-/// own `Double` description, which — like JS's `Number::toString` — is a
-/// shortest-round-trip decimal representation, so for any double value
-/// produced by identical IEEE 754 arithmetic the two already agree digit for
-/// digit (e.g. `0.1 + 0.2` prints `0.30000000000000004` in both). Adherence
-/// percentages and trend deltas are the only two call sites here that need
-/// this — the TS source interpolates them with no additional rounding, so
-/// this deliberately does not round either, to keep any floating-point
-/// artifact in exact parity with the source.
-private func jsNumberString(_ x: Double) -> String {
-    if x.isFinite, x == x.rounded() {
-        return String(Int(x))
-    }
-    return String(x)
-}
-
 // MARK: - buildInsights
 
 /// Ports `buildInsights` (`analytics.ts:452-543`). Runs each rule in source

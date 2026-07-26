@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerCore
+import Testing
 
 // Ports `tests/unit/inventory.test.ts` (all cases), plus the
 // `expectedPerDayForSchedules` describe block from `tests/unit/analytics.test.ts`

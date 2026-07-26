@@ -39,21 +39,6 @@ private func round1(_ n: Double) -> Double {
     Double(jsRound(n * 10)) / 10
 }
 
-// MARK: - JS-style number-to-string
-
-/// Mirrors `jsNumberString` in `Insights.swift` — renders a `Double` the way
-/// a JS template literal (`${x}`) would: whole values print with no
-/// trailing `.0` (`40` not `40.0`), matching `Number.prototype.toString()`.
-/// Re-declared locally (rather than shared) since the source's `private` is
-/// file-scoped in Swift; every coordinate this file formats has already been
-/// through `round1`, so the two-file duplication stays trivially in sync.
-private func jsNumberString(_ x: Double) -> String {
-    if x.isFinite, x == x.rounded() {
-        return String(Int(x))
-    }
-    return String(x)
-}
-
 // MARK: - buildSparklineShape
 
 /// Ports `buildSparklineShape` (`sparkline.ts:12-47`).

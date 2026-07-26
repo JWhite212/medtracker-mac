@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerCore
+import Testing
 
 // Transcribes `describe("escapeCsvCell", ...)` from
 // `tests/unit/export-csv.test.ts:9-58` verbatim (exact escaped outputs). The

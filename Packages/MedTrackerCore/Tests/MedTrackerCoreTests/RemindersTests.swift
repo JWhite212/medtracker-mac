@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerCore
+import Testing
 
 // Ports the PURE cases of `tests/unit/reminders-dedupe.test.ts` — the
 // `isScheduleOverdue`/`computeOverdueSlot` interval + fixed_time branches and

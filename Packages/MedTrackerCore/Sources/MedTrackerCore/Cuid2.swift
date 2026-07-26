@@ -85,7 +85,7 @@ enum Cuid2 {
         let body = base36(h1, width: 8) + base36(h2, width: 8) + base36(h3, width: 8)
         let bodyChars = String(body.prefix(23))
 
-        let letter = Character(UnicodeScalar(UInt8(97 + Int.random(in: 0..<26))))
+        let letter = Character(UnicodeScalar(UInt8(97 + Int.random(in: 0 ..< 26))))
 
         return String(letter) + bodyChars
     }
