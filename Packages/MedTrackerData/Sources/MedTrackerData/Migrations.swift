@@ -25,6 +25,13 @@ public enum Migrations {
             try createSyncStateTable(db)
         }
 
+        migrator.registerMigration("v2") { db in
+            try db.alter(table: OutboxEntry.databaseTableName) { t in
+                t.add(column: "local_entity_id", .text)
+                t.add(column: "local_entity_kind", .text)
+            }
+        }
+
         return migrator
     }
 

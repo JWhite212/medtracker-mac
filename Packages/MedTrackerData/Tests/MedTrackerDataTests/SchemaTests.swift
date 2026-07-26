@@ -271,4 +271,22 @@ struct SchemaTests {
         #expect(eventCount == 0)
         #expect(reminderCount == 0)
     }
+
+    // MARK: - 5. v2 migration — outbox reconciliation columns
+
+    @Test func v2AddsOutboxReconciliationColumns() throws {
+        let dbQueue = try MedTrackerDatabase.open()
+        try dbQueue.write { db in
+            var entry = OutboxEntry(
+                id: "o1", commandType: "upsert_medication_with_schedules",
+                payload: "{}", idempotencyKey: "k1", createdAt: 0,
+            )
+            entry.localEntityId = "localMed1"
+            entry.localEntityKind = "medication"
+            try entry.insert(db)
+            let fetched = try OutboxEntry.fetchOne(db, key: "o1")
+            #expect(fetched?.localEntityId == "localMed1")
+            #expect(fetched?.localEntityKind == "medication")
+        }
+    }
 }

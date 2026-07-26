@@ -593,6 +593,8 @@ public struct OutboxEntry: Codable, Equatable, Sendable, Identifiable, Fetchable
     public var status: String
     public var attemptCount: Int
     public var lastError: String?
+    public var localEntityId: String?
+    public var localEntityKind: String?    // "medication" | "dose_log"
     public var createdAt: Double
 
     enum CodingKeys: String, CodingKey {
@@ -603,6 +605,8 @@ public struct OutboxEntry: Codable, Equatable, Sendable, Identifiable, Fetchable
         case status
         case attemptCount = "attempt_count"
         case lastError = "last_error"
+        case localEntityId = "local_entity_id"
+        case localEntityKind = "local_entity_kind"
         case createdAt = "created_at"
     }
 
@@ -614,6 +618,8 @@ public struct OutboxEntry: Codable, Equatable, Sendable, Identifiable, Fetchable
         status: String = "pending",
         attemptCount: Int = 0,
         lastError: String? = nil,
+        localEntityId: String? = nil,
+        localEntityKind: String? = nil,
         createdAt: Double
     ) {
         self.id = id
@@ -623,6 +629,8 @@ public struct OutboxEntry: Codable, Equatable, Sendable, Identifiable, Fetchable
         self.status = status
         self.attemptCount = attemptCount
         self.lastError = lastError
+        self.localEntityId = localEntityId
+        self.localEntityKind = localEntityKind
         self.createdAt = createdAt
     }
 }
