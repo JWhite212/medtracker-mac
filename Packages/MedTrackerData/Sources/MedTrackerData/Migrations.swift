@@ -122,7 +122,9 @@ public enum Migrations {
         try db.create(table: DoseLog.databaseTableName) { t in
             t.primaryKey("id", .text)
             t.column("user_id", .text).notNull()
-            t.column("medication_id", .text).notNull().indexed()
+            // Not singly indexed: the composite `dose_log_med_taken_idx`
+            // (medication_id, taken_at) already covers medication_id lookups.
+            t.column("medication_id", .text).notNull()
             t.column("quantity", .integer).notNull().defaults(to: 1)
             t.column("taken_at", .double).notNull()
             t.column("logged_at", .double).notNull()
@@ -161,7 +163,9 @@ public enum Migrations {
         try db.create(table: InventoryEvent.databaseTableName) { t in
             t.primaryKey("id", .text)
             t.column("user_id", .text).notNull()
-            t.column("medication_id", .text).notNull().indexed()
+            // Not singly indexed: the composite `inventory_event_med_created_idx`
+            // (medication_id, created_at) already covers medication_id lookups.
+            t.column("medication_id", .text).notNull()
             t.column("event_type", .text).notNull()
             t.column("quantity_change", .integer).notNull()
             t.column("previous_count", .integer)

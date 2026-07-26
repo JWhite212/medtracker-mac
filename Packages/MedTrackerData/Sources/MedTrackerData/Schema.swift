@@ -25,7 +25,7 @@ import GRDB
 /// Mirrors the web's `dose_logs.side_effects` JSONB shape
 /// (`{ name: string; severity: "mild" | "moderate" | "severe" }[]`,
 /// `schema.ts:121-124`).
-public struct SideEffectEntry: Codable, Equatable {
+public struct SideEffectEntry: Codable, Equatable, Sendable {
     public var name: String
     public var severity: String
 
@@ -38,7 +38,7 @@ public struct SideEffectEntry: Codable, Equatable {
 // MARK: - medication
 
 /// Mirrors the web's `medications` table (`schema.ts:66-105`).
-public struct Medication: Codable, Equatable, Identifiable, FetchableRecord, PersistableRecord {
+public struct Medication: Codable, Equatable, Sendable, Identifiable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "medication"
 
     public var id: String
@@ -159,7 +159,7 @@ public struct Medication: Codable, Equatable, Identifiable, FetchableRecord, Per
 /// `MedTrackerCore.ScheduleKind`, kept as a plain `String` here (rather than
 /// bridging the enum type itself) to keep this schema layer decoupled from
 /// `MedTrackerCore`'s domain type.
-public struct MedicationSchedule: Codable, Equatable, Identifiable, FetchableRecord, PersistableRecord {
+public struct MedicationSchedule: Codable, Equatable, Sendable, Identifiable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "medication_schedule"
 
     public var id: String
@@ -235,7 +235,7 @@ public struct MedicationSchedule: Codable, Equatable, Identifiable, FetchableRec
 /// Mirrors the web's `dose_logs` table (`schema.ts:107-131`). Note the web
 /// schema has both `takenAt` (user-facing) and `updatedAt` (sync cursor) —
 /// both are carried here.
-public struct DoseLog: Codable, Equatable, Identifiable, FetchableRecord, PersistableRecord {
+public struct DoseLog: Codable, Equatable, Sendable, Identifiable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "dose_log"
 
     public var id: String
@@ -301,7 +301,7 @@ public struct DoseLog: Codable, Equatable, Identifiable, FetchableRecord, Persis
 // MARK: - inventory_event
 
 /// Mirrors the web's `inventory_events` table (`schema.ts:302-329`).
-public struct InventoryEvent: Codable, Equatable, Identifiable, FetchableRecord, PersistableRecord {
+public struct InventoryEvent: Codable, Equatable, Sendable, Identifiable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "inventory_event"
 
     public var id: String
@@ -356,7 +356,7 @@ public struct InventoryEvent: Codable, Equatable, Identifiable, FetchableRecord,
 /// Mirrors the web's `audit_logs` table (`schema.ts:172-186`). `changes` is
 /// arbitrary JSON (a diff object) stored as raw TEXT — its shape varies per
 /// entity/action, so it is not modeled as a typed Swift value here.
-public struct AuditLog: Codable, Equatable, Identifiable, FetchableRecord, PersistableRecord {
+public struct AuditLog: Codable, Equatable, Sendable, Identifiable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "audit_log"
 
     public var id: String
@@ -408,7 +408,7 @@ public struct AuditLog: Codable, Equatable, Identifiable, FetchableRecord, Persi
 /// only keeps what's needed for a "why didn't I get a reminder?" audit
 /// trail: the dedupe-key identifier, the covered slot instant, and whether
 /// it was delivered or suppressed (e.g. by a dose logged within ±1h).
-public struct ReminderEvent: Codable, Equatable, Identifiable, FetchableRecord, PersistableRecord {
+public struct ReminderEvent: Codable, Equatable, Sendable, Identifiable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "reminder_event"
 
     public var id: String
@@ -467,7 +467,7 @@ public struct ReminderEvent: Codable, Equatable, Identifiable, FetchableRecord, 
 /// layer. `timezone` is the IANA identifier threaded through every
 /// `MedTrackerCore` function that needs the user's profile tz (Global
 /// Constraints: never read `TimeZone.current` in a pure function).
-public struct Profile: Codable, Equatable, FetchableRecord, PersistableRecord {
+public struct Profile: Codable, Equatable, Sendable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "profile"
 
     public var id: Int
@@ -515,7 +515,7 @@ public struct Profile: Codable, Equatable, FetchableRecord, PersistableRecord {
 /// toggles (`overdueRemindersEnabled`, `lowInventoryAlertsEnabled`), since
 /// the Mac app only has one channel (native notifications). Every other
 /// default is carried over verbatim.
-public struct Settings: Codable, Equatable, FetchableRecord, PersistableRecord {
+public struct Settings: Codable, Equatable, Sendable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "settings"
 
     public var id: Int
@@ -580,7 +580,7 @@ public struct Settings: Codable, Equatable, FetchableRecord, PersistableRecord {
 /// Queued `/api/v1` commands awaiting push, keyed by a client-generated
 /// idempotency key (Task 14/1b will drain this). Local-only — not part of
 /// the synced schema.
-public struct OutboxEntry: Codable, Equatable, Identifiable, FetchableRecord, PersistableRecord {
+public struct OutboxEntry: Codable, Equatable, Sendable, Identifiable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "outbox"
 
     public var id: String
@@ -631,7 +631,7 @@ public struct OutboxEntry: Codable, Equatable, Identifiable, FetchableRecord, Pe
 
 /// Per-table delta-sync cursor (the `updated_at` watermark from the last
 /// successful pull). Local-only — not part of the synced schema.
-public struct SyncState: Codable, Equatable, FetchableRecord, PersistableRecord {
+public struct SyncState: Codable, Equatable, Sendable, FetchableRecord, PersistableRecord {
     public static let databaseTableName = "sync_state"
 
     public var tableName: String

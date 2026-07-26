@@ -20,7 +20,7 @@ import Foundation
 /// Mirrors the TS `PATTERN_OPTIONS` ids (`medication-style.ts:103-112`).
 /// Raw values match the web's pattern ids exactly (used as the wire/storage
 /// format, and later as SwiftUI fill selectors in Phase 1c).
-public enum MedicationPattern: String, Equatable, Hashable, CaseIterable {
+public enum MedicationPattern: String, Equatable, Hashable, CaseIterable, Sendable {
     case solid
     case split
     case gradient
@@ -35,7 +35,7 @@ public enum MedicationPattern: String, Equatable, Hashable, CaseIterable {
 
 /// The two candidate foreground colours the picker chooses between. Mirrors
 /// `READABLE_DARK` / `READABLE_LIGHT` (`medication-style.ts:29-30`).
-public enum ReadableTextColor: Equatable, Hashable {
+public enum ReadableTextColor: Equatable, Hashable, Sendable {
     case dark
     case light
 

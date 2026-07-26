@@ -513,6 +513,105 @@ struct RepositoryTests {
         #expect(try db.read { d in try AuditLog.fetchCount(d) } == 0)
     }
 
+    // MARK: - MedicationRepository — per-kind schedule normalization
+    //
+    // `makeSchedule` mirrors the web's `buildScheduleRows` (`schedules.ts`):
+    // it strips fields that don't belong to a row's kind BEFORE insert, so a
+    // stray field never reaches — let alone trips — the 3-way
+    // discriminated-union CHECK. Each case below feeds a deliberately
+    // "dirty" input and asserts it (a) persists and (b) has the off-kind
+    // columns nulled.
+
+    @Test func createMedicationWithSchedules_intervalStrayTimeOfDay_isNormalizedAndPersists() throws {
+        let db = try MedTrackerDatabase.open()
+        let repo = MedicationRepository(dbWriter: db)
+        let fields = MedicationFields(
+            name: "Aspirin", dosageAmount: "100", dosageUnit: "mg",
+            form: "tablet", category: "otc", colour: "#111111"
+        )
+        // interval row carrying a stray time_of_day — would violate the CHECK
+        // if passed straight through; normalization nulls time_of_day first.
+        let med = try repo.createMedicationWithSchedules(
+            userId: "user_1",
+            fields: fields,
+            schedules: [MedicationScheduleInput(
+                scheduleKind: "interval", timeOfDay: "08:00", intervalHours: "8", effectiveFrom: now
+            )]
+        )
+
+        let rows = try db.read { d in
+            try MedicationSchedule.filter(Column("medication_id") == med.id).fetchAll(d)
+        }
+        #expect(rows.count == 1)
+        #expect(rows[0].scheduleKind == "interval")
+        #expect(rows[0].intervalHours == "8")
+        #expect(rows[0].timeOfDay == nil) // stray value dropped
+    }
+
+    @Test func createMedicationWithSchedules_fixedTimeEmptyDaysOfWeek_persistsWithNullDays() throws {
+        let db = try MedTrackerDatabase.open()
+        let repo = MedicationRepository(dbWriter: db)
+        let fields = MedicationFields(
+            name: "Aspirin", dosageAmount: "100", dosageUnit: "mg",
+            form: "tablet", category: "otc", colour: "#111111"
+        )
+        // fixed_time with an EMPTY daysOfWeek array normalizes to nil → SQL NULL
+        // (matching the web's `daysOfWeek.length > 0 ? ... : null`).
+        let med = try repo.createMedicationWithSchedules(
+            userId: "user_1",
+            fields: fields,
+            schedules: [MedicationScheduleInput(
+                scheduleKind: "fixed_time", timeOfDay: "08:00", daysOfWeek: [], effectiveFrom: now
+            )]
+        )
+
+        let rows = try db.read { d in
+            try MedicationSchedule.filter(Column("medication_id") == med.id).fetchAll(d)
+        }
+        #expect(rows.count == 1)
+        #expect(rows[0].scheduleKind == "fixed_time")
+        #expect(rows[0].timeOfDay == "08:00")
+        #expect(rows[0].daysOfWeek == nil) // [] became SQL NULL, not "[]"
+
+        // Confirm the stored value really is SQL NULL, not the JSON text "[]".
+        let rawIsNull = try db.read { d in
+            try Bool.fetchOne(
+                d,
+                sql: "SELECT days_of_week IS NULL FROM medication_schedule WHERE id = ?",
+                arguments: [rows[0].id]
+            )
+        }
+        #expect(rawIsNull == true)
+    }
+
+    @Test func createMedicationWithSchedules_prnStrayFields_normalizeToAllNilAndPersist() throws {
+        let db = try MedTrackerDatabase.open()
+        let repo = MedicationRepository(dbWriter: db)
+        let fields = MedicationFields(
+            name: "Aspirin", dosageAmount: "100", dosageUnit: "mg",
+            form: "tablet", category: "otc", colour: "#111111"
+        )
+        // prn row carrying BOTH a stray interval_hours and time_of_day — would
+        // violate the CHECK if passed straight through; normalization nulls both.
+        let med = try repo.createMedicationWithSchedules(
+            userId: "user_1",
+            fields: fields,
+            schedules: [MedicationScheduleInput(
+                scheduleKind: "prn", timeOfDay: "08:00", intervalHours: "8",
+                daysOfWeek: [1, 2], effectiveFrom: now
+            )]
+        )
+
+        let rows = try db.read { d in
+            try MedicationSchedule.filter(Column("medication_id") == med.id).fetchAll(d)
+        }
+        #expect(rows.count == 1)
+        #expect(rows[0].scheduleKind == "prn")
+        #expect(rows[0].timeOfDay == nil)
+        #expect(rows[0].intervalHours == nil)
+        #expect(rows[0].daysOfWeek == nil)
+    }
+
     // MARK: - Atomic rollback ("retires the web's best-effort-atomic caveat")
 
     @Test func logDose_rollsBackEverythingOnMidTransactionFailure() throws {
@@ -595,6 +694,11 @@ struct RepositoryTests {
     /// injected-fault hook, proving genuine transactional rollback: the
     /// medication update and the delete-then-insert schedule replacement
     /// both roll back together when one replacement schedule row is invalid.
+    ///
+    /// The invalid row is an `interval` kind with NO `interval_hours` — a
+    /// shape the per-kind normalization (`makeSchedule`) can't sanitize into
+    /// validity (unlike a stray off-kind field, which it strips), so it still
+    /// reaches and trips the CHECK.
     @Test func updateMedicationWithSchedules_rollsBackOnScheduleCheckConstraintViolation() throws {
         let db = try MedTrackerDatabase.open()
         let repo = MedicationRepository(dbWriter: db)
@@ -610,9 +714,11 @@ struct RepositoryTests {
 
         var badFields = fields
         badFields.name = "Should not stick"
-        // Invalid: "interval" kind with BOTH interval_hours and time_of_day set.
+        // Invalid: "interval" kind with interval_hours MISSING — the interval
+        // branch of the CHECK requires interval_hours IS NOT NULL, so this row
+        // is rejected even after normalization nulls the (absent) off-kind fields.
         let badSchedules = [
-            MedicationScheduleInput(scheduleKind: "interval", timeOfDay: "08:00", intervalHours: "8", effectiveFrom: now),
+            MedicationScheduleInput(scheduleKind: "interval", effectiveFrom: now),
         ]
 
         #expect(throws: (any Error).self) {

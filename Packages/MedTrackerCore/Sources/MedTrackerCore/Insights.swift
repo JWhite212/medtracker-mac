@@ -20,7 +20,7 @@ import Foundation
 /// TS union's declaration order; the *sort* order used by `buildInsights`
 /// (warning, then positive, then info) is independent of this declaration
 /// order and implemented separately via `severityRank`.
-public enum InsightSeverity: Equatable {
+public enum InsightSeverity: Equatable, Sendable {
     case info
     case positive
     case warning
@@ -41,7 +41,7 @@ private func severityRank(_ severity: InsightSeverity) -> Int {
 /// Ports the TS `Insight` interface (`$lib/types`). `id`s are stable and
 /// exact — they drive UI diffing/accessibility in the web app and must be
 /// preserved verbatim for any future shared behaviour.
-public struct Insight: Equatable {
+public struct Insight: Equatable, Sendable {
     public let id: String
     public let severity: InsightSeverity
     public let text: String
@@ -58,7 +58,7 @@ public struct Insight: Equatable {
 /// One medication's adherence stat, as consumed by the highest/lowest-
 /// adherence rules. Ports the TS `medStats` array element
 /// (`analytics.ts:433`).
-public struct MedAdherenceStat: Equatable {
+public struct MedAdherenceStat: Equatable, Sendable {
     public let medicationName: String
     public let adherence: Double
     public let expectedTotal: Int
@@ -73,7 +73,7 @@ public struct MedAdherenceStat: Equatable {
 /// One day-of-week's dose count. Ports the TS `dayOfWeek` array element
 /// (`analytics.ts:434`). `dayOfWeek` is a Postgres `dow` index: `0` = Sunday
 /// … `6` = Saturday.
-public struct DayOfWeekCount: Equatable {
+public struct DayOfWeekCount: Equatable, Sendable {
     public let dayOfWeek: Int
     public let count: Int
 
@@ -85,7 +85,7 @@ public struct DayOfWeekCount: Equatable {
 
 /// One hour-of-day's dose count. Ports the TS `hourly` array element
 /// (`analytics.ts:435`). `hour` is 0-23.
-public struct HourCount: Equatable {
+public struct HourCount: Equatable, Sendable {
     public let hour: Int
     public let count: Int
 
@@ -99,7 +99,7 @@ public struct HourCount: Equatable {
 /// already-computed stats each `buildInsights` rule reads. All fields
 /// default to the TS test suite's `baseInputs` fixture's empty/zero values,
 /// so callers only need to specify what a given scenario varies.
-public struct InsightInputs {
+public struct InsightInputs: Sendable {
     public let totalDoses: Int
     public let prevTotalDoses: Int
     public let avgAdherence: Double
@@ -212,7 +212,14 @@ public func buildInsights(_ input: InsightInputs) -> [Insight] {
     if totalDow >= 7 {
         let avg = Double(totalDow) / 7
         let worst = input.dayOfWeek.sorted { $0.count < $1.count }.first
-        if let worst, Double(worst.count) < avg * 0.7, worst.count >= 0 {
+        // `dayOfWeek` is documented 0–6 but caller-supplied and unvalidated;
+        // an out-of-range index into `dayLabelFull` is a hard Swift bounds
+        // trap, so skip the insight entirely for such a value (the web, which
+        // subscripts a JS array, yields `undefined` rather than crashing — we
+        // match its non-crashing behavior by omitting the insight).
+        if let worst, Double(worst.count) < avg * 0.7, worst.count >= 0,
+           dayLabelFull.indices.contains(worst.dayOfWeek)
+        {
             out.append(
                 Insight(
                     id: "worst-day",

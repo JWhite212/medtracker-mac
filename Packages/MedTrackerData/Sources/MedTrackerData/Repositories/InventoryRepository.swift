@@ -20,9 +20,11 @@ public enum InventoryRepositoryError: Error, Equatable {
 public struct InventoryRepository {
     private let dbWriter: any DatabaseWriter
 
-    /// Test-only fault injection — see `DoseRepository.testFaultAfterMutation`
-    /// for the contract. Never set outside `RepositoryTests.swift`.
-    var testFaultAfterMutation: (() throws -> Void)?
+    #if DEBUG
+        /// Test-only fault injection — see `DoseRepository.testFaultAfterMutation`
+        /// for the contract. Never set outside `RepositoryTests.swift`.
+        var testFaultAfterMutation: (() throws -> Void)?
+    #endif
 
     public init(dbWriter: any DatabaseWriter) {
         self.dbWriter = dbWriter
@@ -60,7 +62,7 @@ public struct InventoryRepository {
         guard quantity > 0 else { throw InventoryRepositoryError.invalidRefillQuantity }
 
         return try dbWriter.write { db in
-            guard var med = try Self.fetchOwnedMedication(db, userId: userId, medicationId: medicationId) else {
+            guard var med = try Medication.fetchOwned(db, userId: userId, id: medicationId) else {
                 throw InventoryRepositoryError.medicationNotFound
             }
 
@@ -82,7 +84,9 @@ public struct InventoryRepository {
                 createdAt: now.timeIntervalSince1970
             ).insert(db)
 
-            try testFaultAfterMutation?()
+            #if DEBUG
+                try testFaultAfterMutation?()
+            #endif
 
             return RefillResult(previousCount: previousCount, newCount: newCount)
         }
@@ -111,7 +115,7 @@ public struct InventoryRepository {
         guard newCount >= 0 else { throw InventoryRepositoryError.invalidAdjustment }
 
         return try dbWriter.write { db in
-            guard var med = try Self.fetchOwnedMedication(db, userId: userId, medicationId: medicationId) else {
+            guard var med = try Medication.fetchOwned(db, userId: userId, id: medicationId) else {
                 throw InventoryRepositoryError.medicationNotFound
             }
 
@@ -135,15 +139,11 @@ public struct InventoryRepository {
                 createdAt: now.timeIntervalSince1970
             ).insert(db)
 
-            try testFaultAfterMutation?()
+            #if DEBUG
+                try testFaultAfterMutation?()
+            #endif
 
             return AdjustResult(previousCount: previousCount, newCount: newCount, quantityChange: quantityChange)
         }
-    }
-
-    // MARK: - Helpers
-
-    private static func fetchOwnedMedication(_ db: Database, userId: String, medicationId: String) throws -> Medication? {
-        try Medication.filter(key: medicationId).filter(Column("user_id") == userId).fetchOne(db)
     }
 }

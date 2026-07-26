@@ -1,0 +1,51 @@
+# Minimal, conservative SwiftLint config for the MedTracker Swift packages.
+#
+# Goal: run `swiftlint --strict` as a lightweight CI guard WITHOUT rewriting the
+# TS-ported, parity-sensitive source — and without ever fighting SwiftFormat
+# (whose config is the authority on layout here). SwiftLint only lints; it must
+# never ask for an edit that `.swiftformat` would undo, or that would break the
+# byte-for-byte parity the port deliberately preserves.
+#
+# `disabled_rules` below lists ONLY rules that actually fire against the current
+# tree, each turned off for a concrete parity/formatting reason rather than
+# suppressed wholesale. Re-run `swiftlint --strict` after adding source before
+# trimming this list.
+
+included:
+  - Packages/MedTrackerCore/Sources
+  - Packages/MedTrackerCore/Tests
+  - Packages/MedTrackerData/Sources
+  - Packages/MedTrackerData/Tests
+
+disabled_rules:
+  # The ported math/geometry/date code uses the TS source's short local names
+  # verbatim (d, t, s, r/g/b, i, v, hh, lo/hi, cy, l1/l2, …) so a Swift↔TS diff
+  # stays trivially reviewable. Renaming them for `identifier_name` would
+  # obscure that mapping — by far the largest source of would-be violations.
+  - identifier_name
+  # SwiftFormat owns comma/brace/line layout. These four fire on styles
+  # SwiftFormat actively produces or requires, so honoring them would create an
+  # unwinnable format-vs-lint tug-of-war:
+  #   - trailing_comma: SwiftFormat keeps trailing commas in multiline literals.
+  #   - opening_brace: SwiftFormat puts the brace on its own line after a
+  #     wrapped multi-line `if`/`guard` condition (wrapMultilineStatementBraces).
+  #   - line_length: long parity comments and TS cross-reference lines.
+  #   - orphaned_doc_comment: a `///` doc separated from its decl by an
+  #     explanatory `//` line (e.g. the `nonisolated(unsafe)` note in Reminders).
+  - trailing_comma
+  - opening_brace
+  - line_length
+  - orphaned_doc_comment
+  # Faithful 1:1 ports of large TS functions/files (computeScheduleSlots,
+  # buildInsights, the whole Schema.swift record set, the repository test
+  # suite). Splitting them purely to satisfy a size metric would diverge from
+  # the source structure the parity work is anchored to.
+  - function_body_length
+  - file_length
+  - type_body_length
+  - cyclomatic_complexity
+  # Pure functions and result tuples that mirror the TS signatures exactly
+  # (e.g. computeScheduleSlots' parameter list, computeTimingStatus' labeled
+  # return tuple). The shape is dictated by parity, not by preference.
+  - function_parameter_count
+  - large_tuple

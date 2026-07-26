@@ -14,7 +14,7 @@ import Foundation
 /// down to the baseline, used for the filled-area variant. `dotX`/`dotY` are
 /// only non-nil for the single-value case, where no line/area is drawn at
 /// all — just a centred dot.
-public struct SparklineShape: Equatable {
+public struct SparklineShape: Equatable, Sendable {
     public let line: String
     public let area: String
     public let dotX: Double?

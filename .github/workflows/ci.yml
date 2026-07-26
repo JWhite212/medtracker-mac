@@ -23,7 +23,7 @@ jobs:
     runs-on: macos-15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Show toolchain
         run: |
@@ -34,7 +34,7 @@ jobs:
       # SwiftPM checkout + each package's build products, keyed on the
       # manifests so a dependency bump busts the cache.
       - name: Cache SwiftPM
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/Library/Caches/org.swift.swiftpm
@@ -60,3 +60,13 @@ jobs:
       # untouched. Fails the job on any formatting drift.
       - name: Lint (SwiftFormat)
         run: swiftformat --lint Packages
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      # Strict lint scoped to the two packages' Sources+Tests via the repo-root
+      # `.swiftlint.yml`'s `included:` list. That config disables only the rules
+      # that clash with the parity-ported style / SwiftFormat, so any NEW
+      # violation (zero today) fails the job.
+      - name: Lint (SwiftLint)
+        run: swiftlint --strict

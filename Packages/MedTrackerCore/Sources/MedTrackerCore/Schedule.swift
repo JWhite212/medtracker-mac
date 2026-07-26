@@ -10,16 +10,9 @@ private let matchToleranceSeconds: TimeInterval = 3600
 
 // MARK: - Local-hour helper (component extraction only — not DST-critical)
 
-/// A proleptic-Gregorian calendar pinned to `timeZone`, used only to read
-/// the local hour component off an instant (`groupSlotsByTimeOfDay`). This is
-/// plain component extraction, not wall-clock⇄UTC resolution, so it doesn't
-/// duplicate the DST-sensitive logic in `Time.swift`.
-private func gregorianCalendar(_ timeZone: TimeZone) -> Calendar {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = timeZone
-    return calendar
-}
-
+/// Reads the local hour component off an instant (`groupSlotsByTimeOfDay`)
+/// via the shared `gregorianCalendar` factory (`Time.swift`). This is plain
+/// component extraction, not wall-clock⇄UTC resolution.
 private func localHour(_ date: Date, timeZone: TimeZone) -> Int {
     gregorianCalendar(timeZone).component(.hour, from: date)
 }

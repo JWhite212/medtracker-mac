@@ -25,12 +25,14 @@ public enum DoseRepositoryError: Error, Equatable {
 public struct DoseRepository {
     private let dbWriter: any DatabaseWriter
 
-    /// Test-only fault injection. When set, invoked as the very last step
-    /// inside the transaction body (after every production mutation has
-    /// been applied, immediately before the closure returns) so that a
-    /// thrown error demonstrates nothing committed. Never set outside
-    /// `RepositoryTests.swift` — production callers never touch this.
-    var testFaultAfterMutation: (() throws -> Void)?
+    #if DEBUG
+        /// Test-only fault injection. When set, invoked as the very last step
+        /// inside the transaction body (after every production mutation has
+        /// been applied, immediately before the closure returns) so that a
+        /// thrown error demonstrates nothing committed. Never set outside
+        /// `RepositoryTests.swift` — production callers never touch this.
+        var testFaultAfterMutation: (() throws -> Void)?
+    #endif
 
     public init(dbWriter: any DatabaseWriter) {
         self.dbWriter = dbWriter
@@ -55,7 +57,7 @@ public struct DoseRepository {
         now: Date = Date()
     ) throws -> DoseLog {
         try dbWriter.write { db in
-            guard var med = try Self.fetchOwnedMedication(db, userId: userId, medicationId: medicationId) else {
+            guard var med = try Medication.fetchOwned(db, userId: userId, id: medicationId) else {
                 throw DoseRepositoryError.medicationNotFound
             }
 
@@ -104,7 +106,9 @@ public struct DoseRepository {
                 createdAt: nowEpoch
             ).insert(db)
 
-            try testFaultAfterMutation?()
+            #if DEBUG
+                try testFaultAfterMutation?()
+            #endif
 
             return dose
         }
@@ -128,7 +132,7 @@ public struct DoseRepository {
         now: Date = Date()
     ) throws -> DoseLog {
         try dbWriter.write { db in
-            guard try Self.fetchOwnedMedication(db, userId: userId, medicationId: medicationId) != nil else {
+            guard try Medication.fetchOwned(db, userId: userId, id: medicationId) != nil else {
                 throw DoseRepositoryError.medicationNotFound
             }
 
@@ -157,7 +161,9 @@ public struct DoseRepository {
                 createdAt: nowEpoch
             ).insert(db)
 
-            try testFaultAfterMutation?()
+            #if DEBUG
+                try testFaultAfterMutation?()
+            #endif
 
             return dose
         }
@@ -191,7 +197,7 @@ public struct DoseRepository {
             try dose.delete(db)
 
             if dose.status == "taken",
-               var med = try Self.fetchOwnedMedication(db, userId: userId, medicationId: dose.medicationId),
+               var med = try Medication.fetchOwned(db, userId: userId, id: dose.medicationId),
                let previousCount = med.inventoryCount
             {
                 let newCount = previousCount + dose.quantity
@@ -219,7 +225,9 @@ public struct DoseRepository {
                 createdAt: now.timeIntervalSince1970
             ).insert(db)
 
-            try testFaultAfterMutation?()
+            #if DEBUG
+                try testFaultAfterMutation?()
+            #endif
 
             return true
         }
@@ -232,9 +240,11 @@ public struct DoseRepository {
     /// when `status == "taken" && quantity` was supplied and differs from
     /// the existing quantity: `diff = newQuantity - oldQuantity`,
     /// `newCount = max(0, count - diff)`, and the recorded event delta is
-    /// the clamped `newCount - previousCount` (not `-diff`). Appends an
-    /// `update` audit row only when at least one field actually changed
-    /// (mirrors `computeChanges`). One transaction.
+    /// the clamped `newCount - previousCount` (not `-diff`). Diffs over the
+    /// user-facing dose fields (deliberately **excluding** `updatedAt`) and
+    /// appends an `update` audit row only when one of them actually changed —
+    /// an INTENTIONAL divergence from the web's always-write behavior (see
+    /// `docs/PARITY-DIVERGENCES.md` entry #2). One transaction.
     ///
     /// `notes`/`sideEffects` use Swift's `T??` "present vs. absent"
     /// convention to mirror the TS `updates.field !== undefined` check:
@@ -281,7 +291,7 @@ public struct DoseRepository {
 
             if inventoryAffectingChange, let newQuantity = quantity {
                 let diff = newQuantity - existing.quantity
-                if var med = try Self.fetchOwnedMedication(db, userId: userId, medicationId: existing.medicationId),
+                if var med = try Medication.fetchOwned(db, userId: userId, id: existing.medicationId),
                    let previousCount = med.inventoryCount
                 {
                     // diff > 0 (quantity went up) drops inventory; diff < 0
@@ -316,7 +326,9 @@ public struct DoseRepository {
                 ).insert(db)
             }
 
-            try testFaultAfterMutation?()
+            #if DEBUG
+                try testFaultAfterMutation?()
+            #endif
 
             return updated
         }
@@ -324,18 +336,18 @@ public struct DoseRepository {
 
     // MARK: - Helpers
 
-    private static func fetchOwnedMedication(_ db: Database, userId: String, medicationId: String) throws -> Medication? {
-        try Medication.filter(key: medicationId).filter(Column("user_id") == userId).fetchOne(db)
-    }
-
     private static func encodeSideEffects(_ value: [SideEffectEntry]?) -> String? {
         guard let value, let data = try? JSONEncoder().encode(value) else { return nil }
         return String(data: data, encoding: .utf8)
     }
 
-    /// Minimal JSON-diff over the fields `updateDose` can actually change.
-    /// Ports the intent of `computeChanges` (`audit.ts:19-28`) — a plain
-    /// key -> {from, to} object, `nil` when nothing changed.
+    /// Minimal JSON-diff over the user-facing fields `updateDose` can change
+    /// (deliberately **excluding** `updatedAt`) — a plain key -> {from, to}
+    /// object, `nil` when nothing changed, so the `update` audit row is gated
+    /// on a real change. This is an INTENTIONAL divergence from the web's
+    /// `computeChanges` (`audit.ts:19-28`), whose `Object.keys(after)` loop
+    /// always sees the freshly-bumped `updatedAt` and therefore always writes
+    /// an audit row. See `docs/PARITY-DIVERGENCES.md` entry #2.
     private static func computeChanges(before: DoseLog, after: DoseLog) -> String? {
         var changed: [String: [String: Any]] = [:]
 
@@ -356,7 +368,9 @@ public struct DoseRepository {
         }
 
         guard !changed.isEmpty else { return nil }
-        guard let data = try? JSONSerialization.data(withJSONObject: changed) else { return nil }
+        guard let data = try? JSONSerialization.data(withJSONObject: changed, options: [.sortedKeys]) else {
+            return nil
+        }
         return String(data: data, encoding: .utf8)
     }
 }

@@ -72,8 +72,7 @@ public func fixedTimeOverdueSlot(
         return nil
     }
 
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = timeZone
+    let calendar = gregorianCalendar(timeZone)
     let today = calendar.dateComponents([.year, .month, .day], from: now)
     guard let year = today.year, let month = today.month, let day = today.day else { return nil }
 
@@ -98,7 +97,10 @@ public func fixedTimeOverdueSlot(
 /// always a literal `Z`. Used to embed the slot instant in dedupe-key
 /// strings so the Mac app's `UNNotificationRequest` identifiers (Phase 2)
 /// match the web app's byte-for-byte.
-private let isoWithMilliseconds: ISO8601DateFormatter = {
+// Configured exactly once here and only ever read (never re-mutated);
+// ISO8601DateFormatter's `string(from:)` is thread-safe after configuration,
+// so this shared instance is safe to reach from any isolation domain.
+private nonisolated(unsafe) let isoWithMilliseconds: ISO8601DateFormatter = {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     return formatter
