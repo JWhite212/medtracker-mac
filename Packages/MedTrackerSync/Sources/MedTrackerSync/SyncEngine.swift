@@ -95,6 +95,19 @@ public actor SyncEngine {
         )
     }
 
+    /// Tx-joining passthrough to `OutboxStore.enqueue(_ db:…)`. Marked `nonisolated`
+    /// so it is callable from inside a synchronous `dbWriter.write { db in … }` block
+    /// (an actor-isolated `async` method could not be — the write closure cannot
+    /// `await`). Reads only the immutable, Sendable `outbox`, so this is concurrency-safe.
+    @discardableResult
+    nonisolated public func enqueue(
+        _ db: Database, type: String, payload: JSONValue,
+        localEntityId: String? = nil, localEntityKind: EntityKind? = nil
+    ) throws -> OutboxEntry {
+        try outbox.enqueue(db, type: type, payload: payload,
+                           localEntityId: localEntityId, localEntityKind: localEntityKind)
+    }
+
     /// Runs one full sync cycle: push, then pull, then apply, then persist. Each step commits its
     /// own durable state before the next begins (the drainer commits one command at a time,
     /// `SyncApplier` commits its whole apply in one transaction, and the cursor+epoch write is

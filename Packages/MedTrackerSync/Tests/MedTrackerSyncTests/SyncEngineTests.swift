@@ -55,3 +55,17 @@ private func read<T>(_ db: DatabaseQueue, _ work: @escaping (Database) throws ->
     #expect(comps.queryItems?.first { $0.name == "since" }?.value == "2026-07-26T09:00:00.000Z")
     #expect(comps.queryItems?.first { $0.name == "epoch" }?.value == "2")
 }
+
+@Test func engineEnqueuePassthroughJoinsCallerTransaction() throws {
+    let db = try MedTrackerDatabase.open()
+    let engine = SyncEngine(config: .production, dbWriter: db, tokenStore: InMemoryTokenStore())
+    struct Boom: Error {}
+
+    #expect(throws: Boom.self) {
+        try db.write { d in
+            _ = try engine.enqueue(d, type: "refill", payload: .object([:]))
+            throw Boom()
+        }
+    }
+    try #expect(db.read { try OutboxEntry.fetchCount($0) } == 0)
+}

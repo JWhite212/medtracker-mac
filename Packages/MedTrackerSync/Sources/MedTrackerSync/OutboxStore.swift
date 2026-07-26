@@ -27,24 +27,17 @@ public struct OutboxStore: Sendable {
         self.dbWriter = dbWriter
     }
 
-    /// Inserts a new `"pending"` outbox row for `type`/`payload` and returns it.
-    /// `payload` is JSON-encoded to a string via `JSONEncoder`; `id` and
-    /// `idempotencyKey` are independently generated `createId()` values (the
-    /// idempotency key is what the server dedupes retries on, so it must stay
-    /// stable across `markFailed` retries of the same row).
-    @discardableResult
-    public func enqueue(
-        type: String,
-        payload: JSONValue,
-        localEntityId: String? = nil,
-        localEntityKind: EntityKind? = nil
+    /// Builds a fresh `"pending"` row for `type`/`payload`. Shared by both `enqueue`
+    /// overloads; performs no DB access itself. `id`/`idempotencyKey` are independent
+    /// `createId()` values (the idempotency key must stay stable across retries).
+    private func makePendingEntry(
+        type: String, payload: JSONValue,
+        localEntityId: String?, localEntityKind: EntityKind?
     ) throws -> OutboxEntry {
         let payloadData = try JSONEncoder().encode(payload)
-        // JSONEncoder always emits valid UTF-8, so the failable initializer
-        // SwiftLint prefers here can never return nil.
+        // JSONEncoder always emits valid UTF-8, so this failable init never returns nil.
         let payloadJSON = String(data: payloadData, encoding: .utf8)!
-
-        let entry = OutboxEntry(
+        return OutboxEntry(
             id: createId(),
             commandType: type,
             payload: payloadJSON,
@@ -56,11 +49,36 @@ public struct OutboxStore: Sendable {
             localEntityKind: localEntityKind?.rawValue,
             createdAt: Date().timeIntervalSince1970
         )
+    }
 
-        return try dbWriter.write { db in
-            try entry.insert(db)
-            return entry
+    /// Standalone enqueue: opens its own `dbWriter.write` transaction. Unchanged
+    /// public behaviour for callers that have no surrounding transaction.
+    @discardableResult
+    public func enqueue(
+        type: String, payload: JSONValue,
+        localEntityId: String? = nil, localEntityKind: EntityKind? = nil
+    ) throws -> OutboxEntry {
+        try dbWriter.write { db in
+            try enqueue(db, type: type, payload: payload,
+                        localEntityId: localEntityId, localEntityKind: localEntityKind)
         }
+    }
+
+    /// Tx-joining enqueue (§4.2): inserts the pending row inside the CALLER's
+    /// transaction — no internal `dbWriter.write` — so the optimistic state effect
+    /// and this enqueue commit (or roll back) atomically. Used by the Task-10
+    /// WriteCoordinator, whose command bodies are one `dbWriter.write { db in … }`.
+    @discardableResult
+    public func enqueue(
+        _ db: Database, type: String, payload: JSONValue,
+        localEntityId: String? = nil, localEntityKind: EntityKind? = nil
+    ) throws -> OutboxEntry {
+        let entry = try makePendingEntry(
+            type: type, payload: payload,
+            localEntityId: localEntityId, localEntityKind: localEntityKind
+        )
+        try entry.insert(db)
+        return entry
     }
 
     /// All `"pending"` rows, FIFO by `created_at` with `rowid` as a tiebreak
