@@ -4,7 +4,7 @@
 
 **Goal:** Put a native SwiftUI app on top of the three finished, tested packages (`MedTrackerCore`, `MedTrackerData`, `MedTrackerSync`) — an app shell + composition root, a first-run consent gate, auth/session gating, and the three read-heavy screens (Dashboard, Medications, History) — with every user action wired through the **thin optimistic + enqueue write path** whose mechanism Phase 1b built and explicitly deferred the wiring of (Phase 1b §7.1). The result is a signable, sandboxed macOS 15 app that logs in, runs a first full sync, and lets the owner browse and mutate their real data offline, with all writes converging on the server.
 
-**Altitude — 1c is explicitly pre-submission.** It is built to *build, sign, and run* cleanly, not to clear App Review. `PrivacyInfo.xcprivacy` is included only so the target signs; account-deletion UI (master 5.1.1v), SIWA live-path completeness (4.8), the "Load sample data" review seed (§13), and keychain hardening (§11) are all **ship-phase**, not 1c.
+**Altitude — 1c is explicitly pre-submission.** It is built to _build, sign, and run_ cleanly, not to clear App Review. `PrivacyInfo.xcprivacy` is included only so the target signs; account-deletion UI (master 5.1.1v), SIWA live-path completeness (4.8), the "Load sample data" review seed (§13), and keychain hardening (§11) are all **ship-phase**, not 1c.
 
 **Reference (source of truth for screens/behaviours/design language):** the master design spec `docs/design/2026-07-25-macos-app-design.md` (esp. §6, §6.1, §8, §10, §10.1, §10.2, §11, §12, §13, §15). Where a screen behaviour and this spec disagree, the master spec wins. Phase 1c changes **no** package public behaviour except the small, enumerated API additions in §8; it adds two new SPM library packages and the app target.
 
@@ -21,12 +21,12 @@ Four boundary/structure choices exceed or reinterpret the confirmed 1c scope and
 - **(c) Contract copy-in.** `api-v1-contract.md` must be copied into `medtracker-mac` before the write-path implementation tasks. **Recommend the owner copy it into `docs/design/`** (same home as this design spec); auth-path work proceeds in parallel.
 - **(d) SIWA scope.** The button + full `SyncEngine.signInWithApple` wiring ship and compile, but the live path (paid `com.apple.developer.applesignin` capability + confirmed backend `/auth/apple`) is a **manual gated smoke, not a CI/1c acceptance gate**. **Recommend YES.**
 
-| # | Decision | Recommendation | Owner: Approve / Reject | Date |
-|---|---|---|---|---|
-| a | Two library packages + test-support | YES | | |
-| b | xcodegen embedding, no workspace | YES | | |
-| c | Copy `api-v1-contract.md` into `docs/design/` | YES (owner action) | | |
-| d | SIWA live path = manual gated smoke | YES | | |
+| #   | Decision                                      | Recommendation     | Owner: Approve / Reject | Date |
+| --- | --------------------------------------------- | ------------------ | ----------------------- | ---- |
+| a   | Two library packages + test-support           | YES                |                         |      |
+| b   | xcodegen embedding, no workspace              | YES                |                         |      |
+| c   | Copy `api-v1-contract.md` into `docs/design/` | YES (owner action) |                         |      |
+| d   | SIWA live path = manual gated smoke           | YES                |                         |      |
 
 ---
 
@@ -34,33 +34,33 @@ Four boundary/structure choices exceed or reinterpret the confirmed 1c scope and
 
 ### 1.1 In scope (Phase 1c)
 
-| Area | What ships |
-| --- | --- |
-| **App shell** | New SwiftUI `MedTracker` app target + xcodegen config linking the three local SPM packages; two new SPM library packages (`MedTrackerApp`, `MedTrackerUI`) + one test-support package; composition root / `AppEnvironment`; `NavigationSplitView` sidebar with exactly three destinations. |
-| **First-run consent** | Blocking medical-disclaimer consent gate (verbatim text, `disclaimerAcknowledged` in `UserDefaults`) before the app is usable (§3, master §13/1.4.1). |
-| **Auth / session gating** | Email+password login, TOTP challenge, Keychain session, 401→re-login, first-run full-sync gate. Sign in with Apple wired to `SyncEngine.signInWithApple`, **conditional** on backend SIWA availability + paid entitlement (§0(d), manual). |
-| **Dashboard** | SummaryStrip, RefillsCard, My-Day timeline (time-of-day groups), QuickLogBar pills (pattern bg + contrast text, qty 1–10, ~700 ms success flash), Today feed with overdue rows + Skip, TimeSince live counters, zero-meds onboarding CTA. |
-| **Medications** | List (MedicationCard: pattern swatch, refill/low chips, adherence mini-bar, 14-day sparkline), reorder, archived group; Med form + detail (identity/dosage/form/category/StylePicker/ScheduleSection/inventory; disclaimer notice; refill/adjust + inventory-event history; archive/unarchive). |
-| **History (`/log`)** | Filter bar (med/status/date/notes-search/side-effects), profile-tz local-date grouping (Today/Yesterday/…), pagination, TimelineEntry edit sheet + delete. |
-| **Optimistic-write layer** | All ten commands wired as thin state-effect + outbox-enqueue (`log_dose`, `skip_dose`, `edit_dose`, `delete_dose`, `refill`, `adjust_inventory`, `upsert_medication_with_schedules`, `archive`, `unarchive`, `reorder`). |
-| **Design language** | Dark-only theme tokens, 8 medication patterns as SwiftUI fills with `<20pt→gradient` degradation, `getReadableTextColor`, custom `Canvas`/`Path` sparkline, accessibility parity (VoiceOver, Dynamic Type, reduce-motion from system + synced pref). |
-| **Testing/CI** | Mock-first hermetic `swift test` over the logic packages; snapshot tests under `xcodebuild`; app build lane; manual live smoke gated on backend. |
+| Area                       | What ships                                                                                                                                                                                                                                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **App shell**              | New SwiftUI `MedTracker` app target + xcodegen config linking the three local SPM packages; two new SPM library packages (`MedTrackerApp`, `MedTrackerUI`) + one test-support package; composition root / `AppEnvironment`; `NavigationSplitView` sidebar with exactly three destinations.      |
+| **First-run consent**      | Blocking medical-disclaimer consent gate (verbatim text, `disclaimerAcknowledged` in `UserDefaults`) before the app is usable (§3, master §13/1.4.1).                                                                                                                                           |
+| **Auth / session gating**  | Email+password login, TOTP challenge, Keychain session, 401→re-login, first-run full-sync gate. Sign in with Apple wired to `SyncEngine.signInWithApple`, **conditional** on backend SIWA availability + paid entitlement (§0(d), manual).                                                      |
+| **Dashboard**              | SummaryStrip, RefillsCard, My-Day timeline (time-of-day groups), QuickLogBar pills (pattern bg + contrast text, qty 1–10, ~700 ms success flash), Today feed with overdue rows + Skip, TimeSince live counters, zero-meds onboarding CTA.                                                       |
+| **Medications**            | List (MedicationCard: pattern swatch, refill/low chips, adherence mini-bar, 14-day sparkline), reorder, archived group; Med form + detail (identity/dosage/form/category/StylePicker/ScheduleSection/inventory; disclaimer notice; refill/adjust + inventory-event history; archive/unarchive). |
+| **History (`/log`)**       | Filter bar (med/status/date/notes-search/side-effects), profile-tz local-date grouping (Today/Yesterday/…), pagination, TimelineEntry edit sheet + delete.                                                                                                                                      |
+| **Optimistic-write layer** | All ten commands wired as thin state-effect + outbox-enqueue (`log_dose`, `skip_dose`, `edit_dose`, `delete_dose`, `refill`, `adjust_inventory`, `upsert_medication_with_schedules`, `archive`, `unarchive`, `reorder`).                                                                        |
+| **Design language**        | Dark-only theme tokens, 8 medication patterns as SwiftUI fills with `<20pt→gradient` degradation, `getReadableTextColor`, custom `Canvas`/`Path` sparkline, accessibility parity (VoiceOver, Dynamic Type, reduce-motion from system + synced pref).                                            |
+| **Testing/CI**             | Mock-first hermetic `swift test` over the logic packages; snapshot tests under `xcodebuild`; app build lane; manual live smoke gated on backend.                                                                                                                                                |
 
 ### 1.2 Deferred to Phase 2 (stub/placeholder mention only)
 
-| Deferred | 1c posture |
-| --- | --- |
-| Notification engine (`NotificationPlanner`, actions, suppression, tz/wake triggers, menu-bar agent) | Not built. Replan triggers on write/sync are Phase 2. |
-| Analytics screen (Insights, Heatmap, distributions, period control) | **Sidebar entry omitted entirely** (§2.5), not a disabled stub. |
-| Full Settings screens (Profile/Appearance/Notifications/Data/Privacy) | **No Settings screen** (§1.3); only a sidebar-footer account control + sync-status chip. |
-| CSV/PDF export via `NSSavePanel` | `Csv` Core helpers exist but unused; no export UI. |
-| App lock (`LocalAuthentication`) + re-auth gates; account-deletion UI | Not built (ship-phase / Phase 2). |
-| openFDA interaction checker | Detail renders a disabled "coming soon" `InteractionProbeCard` stub only. |
+| Deferred                                                                                            | 1c posture                                                                               |
+| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Notification engine (`NotificationPlanner`, actions, suppression, tz/wake triggers, menu-bar agent) | Not built. Replan triggers on write/sync are Phase 2.                                    |
+| Analytics screen (Insights, Heatmap, distributions, period control)                                 | **Sidebar entry omitted entirely** (§2.5), not a disabled stub.                          |
+| Full Settings screens (Profile/Appearance/Notifications/Data/Privacy)                               | **No Settings screen** (§1.3); only a sidebar-footer account control + sync-status chip. |
+| CSV/PDF export via `NSSavePanel`                                                                    | `Csv` Core helpers exist but unused; no export UI.                                       |
+| App lock (`LocalAuthentication`) + re-auth gates; account-deletion UI                               | Not built (ship-phase / Phase 2).                                                        |
+| openFDA interaction checker                                                                         | Detail renders a disabled "coming soon" `InteractionProbeCard` stub only.                |
 
 ### 1.3 Boundary decisions (confirmed with owner)
 
 - **No dedicated Settings screen in 1c.** Timezone for all date bucketing comes from the synced `Profile.timezone` (single-row `Profile`, `id == 1`), **never** `TimeZone.current`. Accent stays the default `#6366f1`; the 10-preset picker (a Settings concern) is Phase 2. The one thing Settings would otherwise host — **Sign Out** and a **sync-status indicator** — lives in the sidebar footer (§2.5), not a destination.
-- **The 1c↔2 line is "read + mutate the existing data model, converging on the server."** Anything that generates new device-side signal (notifications, analytics aggregates as a screen, exports) is Phase 2. The aggregation *math* those screens need already exists in `MedTrackerCore`; 1c does not surface it.
+- **The 1c↔2 line is "read + mutate the existing data model, converging on the server."** Anything that generates new device-side signal (notifications, analytics aggregates as a screen, exports) is Phase 2. The aggregation _math_ those screens need already exists in `MedTrackerCore`; 1c does not surface it.
 
 ---
 
@@ -68,7 +68,7 @@ Four boundary/structure choices exceed or reinterpret the confirmed 1c scope and
 
 ### 2.1 Module layout — testable libraries + a thin app shell
 
-The stores, view-models, the optimistic-write layer, the record→lean-model adapters, and the design system live in SPM library packages, not the app target (§0(a)). The app target holds only what *cannot* run under `swift test`.
+The stores, view-models, the optimistic-write layer, the record→lean-model adapters, and the design system live in SPM library packages, not the app target (§0(a)). The app target holds only what _cannot_ run under `swift test`.
 
 ```
 Packages/
@@ -90,7 +90,7 @@ App/  (xcodegen app target) — @main App, AppEnvironment composition root, Keyc
 
 **Justification.** An app-hosted XCTest bundle needs the app to launch (GUI session, signing, run loop) and does not compose with the fast `swift test` lane the three packages already run. An SPM library gets `swift test` for free and reuses the Phase 1b doubles verbatim: in-memory GRDB via `MedTrackerDatabase.open(path: nil)`, `InMemoryTokenStore`, and an `HTTPTransport` stub. A store test builds a real `SyncEngine(config:dbWriter:tokenStore:transport:)` from all three doubles and drives it with zero network. Keeping the target a shell means the un-unit-testable code is the code with almost nothing to test.
 
-**Language mode.** `MedTrackerApp` / `MedTrackerUI` / the app target adopt **Swift 6 language mode + `SWIFT_STRICT_CONCURRENCY: complete`** (Xcode 26 / Swift 6.2 toolchain); the three ported packages stay in Swift 5 mode (`swiftLanguageMode(.v5)`). Interop is safe because those packages vend a `Sendable` public surface (records `Sendable`; `SyncEngine` an `actor`; `OutboxStore`/`SyncStateStore` `Sendable`) — with the caveat that strict-concurrency diagnostics do **not** propagate *into* the packages, so their annotations are the contract, not a compiler-enforced guarantee.
+**Language mode.** `MedTrackerApp` / `MedTrackerUI` / the app target adopt **Swift 6 language mode + `SWIFT_STRICT_CONCURRENCY: complete`** (Xcode 26 / Swift 6.2 toolchain); the three ported packages stay in Swift 5 mode (`swiftLanguageMode(.v5)`). Interop is safe because those packages vend a `Sendable` public surface (records `Sendable`; `SyncEngine` an `actor`; `OutboxStore`/`SyncStateStore` `Sendable`) — with the caveat that strict-concurrency diagnostics do **not** propagate _into_ the packages, so their annotations are the contract, not a compiler-enforced guarantee.
 
 ### 2.2 Workspace + app target (xcodegen)
 
@@ -98,7 +98,7 @@ The current `project.yml` builds only `MedTrackerSpike` and references no packag
 
 **Product name / bundle id `MedTracker` / `site.jamiewhite.medtracker`** deliberately match `KeychainTokenStore`'s default `service: "site.jamiewhite.medtracker"` (`TokenStore.swift`) and the API host `medication-tracker.jamiewhite.site`. (The Spike used `com.jamiewhite` / `public.app-category.medical`; both change here — §13 wants Health & Fitness.)
 
-**No `.xcworkspace` (§0(b)).** xcodegen's local-`path:` entries embed the packages as references *inside* the generated `.xcodeproj`; modern Xcode resolves local packages without a workspace. One generator (xcodegen), one generated artifact (git-ignored), `project.yml` + package sources as the durable source of truth.
+**No `.xcworkspace` (§0(b)).** xcodegen's local-`path:` entries embed the packages as references _inside_ the generated `.xcodeproj`; modern Xcode resolves local packages without a workspace. One generator (xcodegen), one generated artifact (git-ignored), `project.yml` + package sources as the durable source of truth.
 
 **Keep the Spike** as a secondary, non-release target on its own Phase-0 go/no-go merit: it is the go/no-go harness and builds independently at no cost to the release target. (Its use as the time-sensitive-entitlement provisioning probe is a Phase-2 concern and not a reason to retain it now.)
 
@@ -106,10 +106,10 @@ The current `project.yml` builds only `MedTrackerSpike` and references no packag
 
 New `App/MedTracker.entitlements`:
 
-| Key | Value | Why |
-| --- | --- | --- |
-| `com.apple.security.app-sandbox` | `true` | Mandatory for MAS (§11). |
-| `com.apple.security.network.client` | `true` | `/api/v1` login + sync. |
+| Key                                 | Value  | Why                      |
+| ----------------------------------- | ------ | ------------------------ |
+| `com.apple.security.app-sandbox`    | `true` | Mandatory for MAS (§11). |
+| `com.apple.security.network.client` | `true` | `/api/v1` login + sync.  |
 
 - **Hardened Runtime** is the build setting `ENABLE_HARDENED_RUNTIME: YES`, not an entitlement key.
 - **Keychain needs no entitlement in 1c.** `KeychainTokenStore` uses a plain `kSecClassGenericPassword` item keyed on `service`/`account` with no `kSecAttrAccessGroup`; under App Sandbox it lands in the app's default access group. `keychain-access-groups` is only for cross-app sharing (not done). The data-protection-keychain hardening is ship-phase (§2.6/A7, §8-#6) — **no third entitlement in 1c**.
@@ -144,7 +144,7 @@ A single composition root constructed once at launch, holding process-wide infra
 - **DB path (sandbox):** `~/Library/Containers/site.jamiewhite.medtracker/Data/Library/Application Support/MedTracker/medtracker.sqlite` — FileVault-covered, Time-Machine-backed (§12). `MedTrackerDatabase.open` applies the migrator, registers the `localDate` SQL function, sets `foreign_keys=ON` + WAL.
 - **The test seam is already supported by shipped signatures:** `open(path: nil)` → in-memory; `SyncEngine.init(...transport:)` takes any public `HTTPTransport`; `InMemoryTokenStore` is public. No production test-hook needed.
 - **Injection & userId (A6).** `@main App` builds `AppEnvironment.live()` once into `@State`, wraps it in the `@Observable SessionModel` (§3) + `@Observable AppModel`, and injects via `.environment(...)`. The authenticated **`userId` is threaded from `SessionModel` into the `WriteCoordinator` at construction** — the coordinator never reads it per-write from `KeychainTokenStore.load()?.userId` on the main actor. Screens read the app-wide model from `@Environment` and construct their per-screen `@State` stores by init-injection (§2.6), each getting the exact `dbWriter`/`userId`/`WriteCoordinator` it needs.
-- **The repositories are not constructed.** `MedicationRepository`/`DoseRepository`/`InventoryRepository` are *not* on the synced write path (they write server-owned `inventory_event`/`audit_log` rows). Reads go through `ValueObservation` on records directly. In 1c the repos stay dormant as the atomic reference + parity-test target; the composition root does **not** wire them (that would be dead wiring).
+- **The repositories are not constructed.** `MedicationRepository`/`DoseRepository`/`InventoryRepository` are _not_ on the synced write path (they write server-owned `inventory_event`/`audit_log` rows). Reads go through `ValueObservation` on records directly. In 1c the repos stay dormant as the atomic reference + parity-test target; the composition root does **not** wire them (that would be dead wiring).
 
 ### 2.5 Navigation — `NavigationSplitView`
 
@@ -193,7 +193,8 @@ struct DashboardSnapshot: Sendable { /* Sendable records only */ }
 ```
 
 **Rules (apply to every screen store — Dashboard/Medications/History):**
-- **View-driven cancellation (A1):** the view calls `.task { await store.observe() }`; `observe()` runs the `for try await` loop *directly* so SwiftUI auto-cancels it on disappear. No stored `Task`, no `deinit` backstop.
+
+- **View-driven cancellation (A1):** the view calls `.task { await store.observe() }`; `observe()` runs the `for try await` loop _directly_ so SwiftUI auto-cancels it on disappear. No stored `Task`, no `deinit` backstop.
 - **Error handling (A5):** a real stream error sets `loadError` **and** the view offers a retry that re-invokes `observe()` (rebuilding the observation); `CancellationError` is distinguished and never surfaced as an error, so a disappearing view never renders a false failure.
 - **Render-from-value (A2-i):** SwiftUI views render from the `Sendable` **snapshot value**, init-injected — the store is a thin producer of that value. This is what makes snapshot tests deterministic (§7.2): instantiate the view with a fixed snapshot + fixed `now`/tz, never touching GRDB or the observation. The record→lean-model adapters (§4.1) are the real unit-test seam.
 - **`@State` ownership (A2-ii):** stores are **`@State`-owned, constructed once via `State(initialValue:)`**, capturing `dbWriter`/`userId`/`WriteCoordinator` at first init. **Constructing a store in `body` is forbidden** (SwiftUI recreates view structs every parent render, which would restart/duplicate the observation).
@@ -210,13 +211,14 @@ struct DashboardSnapshot: Sendable { /* Sendable records only */ }
       }
   }
   ```
+
 - **One snapshot per screen:** one observation, fewer reader hops, atomic UI updates — not N observations. Before any `MedTrackerCore` call, the store **adapts records → the lean domain models** (§4.1), always threading `Profile.timezone`.
 
 ---
 
 ## 3. Auth, session gating & sync wiring
 
-`SyncEngine` already owns the entire network + persistence surface for auth: `login`/`verifyTOTP`/`signInWithApple` each call the endpoint *and* persist the `StoredSession` to the injected `TokenStore` on success; `sync()` guards on `tokenStore.load()` and throws `APIError.unauthorized` when it is absent. **Phase 1c adds no networking and no token code** — only a `@MainActor` observable model driving the actor and mapping outcomes/errors onto view state. Every auth wire shape (`LoginBody`, `TOTPBody`, `AppleBody`, `SessionResponse`, `LoginOutcome`) is already modelled and unit-tested, so the auth path does **not** need the contract copy-in (only the write path does).
+`SyncEngine` already owns the entire network + persistence surface for auth: `login`/`verifyTOTP`/`signInWithApple` each call the endpoint _and_ persist the `StoredSession` to the injected `TokenStore` on success; `sync()` guards on `tokenStore.load()` and throws `APIError.unauthorized` when it is absent. **Phase 1c adds no networking and no token code** — only a `@MainActor` observable model driving the actor and mapping outcomes/errors onto view state. Every auth wire shape (`LoginBody`, `TOTPBody`, `AppleBody`, `SessionResponse`, `LoginOutcome`) is already modelled and unit-tested, so the auth path does **not** need the contract copy-in (only the write path does).
 
 ### 3.1 First-run consent gate + the auth state machine (`SessionModel`)
 
@@ -251,7 +253,7 @@ enum AuthPhase: Equatable {
 
 **Identity/timezone comes from the synced `Profile`, not `StoredSession`.** `StoredSession` carries only `{token, userId}`; date bucketing needs `Profile.timezone`, populated by the `/sync` pull (`SyncApplier` upserts the singleton `Profile`). The shell reads `Profile(id == 1)` via `ValueObservation`. Two consequences:
 
-- **First run after login** → `.firstSync` runs `engine.sync()` behind a **modal progress gate** *before* revealing date-bucketed screens (this is also why the DatabaseQueue read-stall during the bulk apply is harmless — §2.6). This is the §12 "migration = login + sync": the owner's Neon history arrives here. The first `sync()` has no stored cursor/epoch, so the server returns a full snapshot — assert `SyncOutcome.fullResync == true`; drive a progress view off `pulledMedications`/`pulledDoseLogs` (or an indeterminate "Loading your medications…"). On success → `.authenticated`. Zero meds after first sync → the onboarding CTA (§5.1.7), not a spinner.
+- **First run after login** → `.firstSync` runs `engine.sync()` behind a **modal progress gate** _before_ revealing date-bucketed screens (this is also why the DatabaseQueue read-stall during the bulk apply is harmless — §2.6). This is the §12 "migration = login + sync": the owner's Neon history arrives here. The first `sync()` has no stored cursor/epoch, so the server returns a full snapshot — assert `SyncOutcome.fullResync == true`; drive a progress view off `pulledMedications`/`pulledDoseLogs` (or an indeterminate "Loading your medications…"). On success → `.authenticated`. Zero meds after first sync → the onboarding CTA (§5.1.7), not a spinner.
 - **Relaunch with a token but offline/empty replica:** if the initial `sync()` throws a transport error, do **not** bounce to login (the session is fine) — enter the shell with whatever local data exists, show a "Couldn't refresh" retry banner, and **fall back to system timezone** for bucketing until a `Profile` row exists (§8-#16).
 
 **401 → re-login, centralized.** Every `sync()` funnels through one `SessionModel.runSync()` whose `catch` treats `APIError.unauthorized` as the sole re-auth signal: `tokenStore.clear()`, then `.unauthenticated(error: .sessionExpired)`. This is the only place that clears the session. All other errors (`.transport`/`.server`/`.rateLimited`) leave `phase == .authenticated` and surface as a non-blocking banner — a dead network must never look like a logout.
@@ -264,7 +266,7 @@ All three call the same `SessionModel.runSync()` (the actor serializes overlappi
 2. **After every write.** The user action performs, in **one GRDB transaction**, the minimal optimistic state effect + the outbox enqueue (§4); the UI updates instantly via `ValueObservation`; then a **debounced** `SyncScheduler.requestSync()` (§4.4) routes through `runSync()` to drain the outbox and re-pull. A failed sync leaves the `OutboxEntry` `pending` for the next trigger — the write is durable regardless.
 3. **Manual refresh.** A toolbar control + `⌘R` calls `runSync()` with a visible spinner + error banner.
 
-**`NSBackgroundActivityScheduler` periodic pull → Phase 2.** §7.6 defines the ~15-min pull purely as the *notification* staleness tax; replanning is the deferred `NotificationPlanner`. Pulling it into 1c would couple to a Phase-2 subsystem and add a nondeterministic timer-driven trigger that undermines deterministic CI. 1c's freshness comes from the three deterministic, mockable triggers above.
+**`NSBackgroundActivityScheduler` periodic pull → Phase 2.** §7.6 defines the ~15-min pull purely as the _notification_ staleness tax; replanning is the deferred `NotificationPlanner`. Pulling it into 1c would couple to a Phase-2 subsystem and add a nondeterministic timer-driven trigger that undermines deterministic CI. 1c's freshness comes from the three deterministic, mockable triggers above.
 
 ---
 
@@ -274,7 +276,7 @@ Phase 1b §7.1 deferred "user-action wiring" to 1c. The layer lives in **`MedTra
 
 ### 4.1 The write-path rule (restated, load-bearing)
 
-On a user action the app: (1) applies the **minimal optimistic local effect to STATE tables only** — `medication` (incl. `inventoryCount`/`sortOrder`/`isArchived`), `dose_log`, `medication_schedule` — and **never** writes local `inventory_event`/`audit_log`; (2) enqueues an `OutboxEntry` **in the same transaction** (§4.2, mandatory); (3) a later `sync()` drains the outbox (`POST /commands`) and re-pulls the server's canonical rows. Optimistic effects mirror the reference repositories' *state math* exactly (clamp on decrement; unclamped restore on delete) but omit the event/audit rows. `localEntityId`/`localEntityKind` are set **only** for the two reconciled create kinds — `.medication` and `.doseLog` — because `Reconciler.reconcile` rewrites exactly those (`medication.id` + child FKs, or `dose_log.id`) when the server returns a canonical id; every other command references existing ids. Client ids are `createId()` from `MedTrackerCore`.
+On a user action the app: (1) applies the **minimal optimistic local effect to STATE tables only** — `medication` (incl. `inventoryCount`/`sortOrder`/`isArchived`), `dose_log`, `medication_schedule` — and **never** writes local `inventory_event`/`audit_log`; (2) enqueues an `OutboxEntry` **in the same transaction** (§4.2, mandatory); (3) a later `sync()` drains the outbox (`POST /commands`) and re-pulls the server's canonical rows. Optimistic effects mirror the reference repositories' _state math_ exactly (clamp on decrement; unclamped restore on delete) but omit the event/audit rows. `localEntityId`/`localEntityKind` are set **only** for the two reconciled create kinds — `.medication` and `.doseLog` — because `Reconciler.reconcile` rewrites exactly those (`medication.id` + child FKs, or `dose_log.id`) when the server returns a canonical id; every other command references existing ids. Client ids are `createId()` from `MedTrackerCore`.
 
 **Adaptation layer (records → lean Core models), used by every screen and the coordinator:**
 
@@ -288,7 +290,7 @@ Medication.pattern → MedicationPattern(rawValue:) ?? .solid
 
 ### 4.2 Interface + the mandatory transaction join (A3)
 
-The "optimistic effect + `OutboxEntry` insert in ONE transaction" invariant is **unsatisfiable with the shipped API**: both `SyncEngine.enqueue` and `OutboxStore.enqueue` open their own `db.write`, so as written the two land in *two* transactions — a crash between them loses the outbox row (dose applied locally, never sent) or strands a command whose optimistic effect rolled back. **Phase 1c MUST close this** (this is required, not an optional fallback):
+The "optimistic effect + `OutboxEntry` insert in ONE transaction" invariant is **unsatisfiable with the shipped API**: both `SyncEngine.enqueue` and `OutboxStore.enqueue` open their own `db.write`, so as written the two land in _two_ transactions — a crash between them loses the outbox row (dose applied locally, never sent) or strands a command whose optimistic effect rolled back. **Phase 1c MUST close this** (this is required, not an optional fallback):
 
 - **Preferred (recommended):** add `OutboxStore.enqueue(_ db: Database, type:payload:localEntityId:localEntityKind:) -> OutboxEntry` (no internal write, callable inside the caller's `dbWriter.write`) to `MedTrackerSync` (§8-#1), keeping id/idempotency-key generation in one place.
 - **Alternative (no package change):** inline `OutboxEntry(id: createId(), idempotencyKey: createId(), status: "pending", createdAt: Date().timeIntervalSince1970, …).insert(db)` inside the coordinator's transaction (verified viable — public memberwise init + public `createId()`).
@@ -306,7 +308,7 @@ Because the whole write becomes a single `await dbWriter.write { … }`, the coo
     @discardableResult func upsertMedication(id existing: String?, fields: MedicationFields, schedules: [MedicationScheduleInput]) async throws -> String
     func archive(medicationId: String) async throws
     func unarchive(medicationId: String) async throws
-    func reorder(orderedMedicationIds: [String]) async throws
+    func reorder(orderedMedicationIds: [String]) async throws   // decomposed into pairwise reorder{medId1,medId2} swaps (§5.2.2)
 }
 ```
 
@@ -314,30 +316,30 @@ Each method runs its state effect + enqueue inside one `await dbWriter.write { d
 
 ### 4.3 Per-command state effect + payload + reconcile keys
 
-| `type` | Optimistic STATE effect (state-only, mirrors the reference repo minus event/audit) | `localEntityId`/`kind` |
-| --- | --- | --- |
-| `log_dose` | insert `DoseLog(status:"taken")`; if `inventoryCount != nil`, `= max(0, prev − qty)` (clamp) | new dose id / `.doseLog` |
-| `skip_dose` | insert `DoseLog(status:"skipped", quantity:1, takenAt: slotExpectedTime)`; no inventory change | new dose id / `.doseLog` † |
-| `edit_dose` | update dose fields; if `status=="taken"` & qty changed, `newCount = max(0, prev − (newQty−oldQty))` (clamp) | — |
-| `delete_dose` | delete dose row; if was `"taken"` & tracked, `newCount = prev + qty` (**unclamped** restore) | — |
-| `refill` | `inventoryCount = (prev ?? 0) + amount` (seeds tracking when nil) | — |
-| `adjust_inventory` | `inventoryCount = newCount` | — |
-| `upsert_medication_with_schedules` | insert/update `medication`; **delete-then-insert** its `medication_schedule` set | new med id (creates only) / `.medication` |
-| `archive` | `isArchived=true`, `archivedAt=now`, `updatedAt=now` | — |
-| `unarchive` | `isArchived=false`, `archivedAt=nil`, `updatedAt=now` | — |
-| `reorder` | update `sort_order` per id (contiguous) | — |
+| `type`                             | Optimistic STATE effect (state-only, mirrors the reference repo minus event/audit)                           | `localEntityId`/`kind`                    |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| `log_dose`                         | insert `DoseLog(status:"taken")`; if `inventoryCount != nil`, `= max(0, prev − qty)` (clamp)                 | new dose id / `.doseLog`                  |
+| `skip_dose`                        | insert `DoseLog(status:"skipped", quantity:1, takenAt: slotExpectedTime)`; no inventory change               | new dose id / `.doseLog`                  |
+| `edit_dose`                        | update dose fields; if `status=="taken"` & qty changed, `newCount = max(0, prev − (newQty−oldQty))` (clamp)  | —                                         |
+| `delete_dose`                      | delete dose row; if was `"taken"` & tracked, `newCount = prev + qty` (**unclamped** restore)                 | —                                         |
+| `refill`                           | `inventoryCount = (prev ?? 0) + amount` (seeds tracking when nil)                                            | —                                         |
+| `adjust_inventory`                 | `inventoryCount = newCount`                                                                                  | —                                         |
+| `upsert_medication_with_schedules` | insert/update `medication`; **delete-then-insert** its `medication_schedule` set                             | new med id (creates only) / `.medication` |
+| `archive`                          | `isArchived=true`, `archivedAt=now`, `updatedAt=now`                                                         | —                                         |
+| `unarchive`                        | `isArchived=false`, `archivedAt=nil`, `updatedAt=now`                                                        | —                                         |
+| `reorder`                          | swap the two affected meds' `sort_order` (state-only); multi-position move → adjacent-swap sequence (§5.2.2) | —                                         |
 
-**† `skip_dose` reconcile is unconfirmed (§5.1.5, §8-#10).** It is wired symmetric to `log_dose` (`.doseLog`), so the drainer will read the canonical id at `result.result?["id"]`. `log_dose`'s id-path is test-verified; `skip_dose`'s is **not** — no in-repo example. If its ack carries the id elsewhere, `serverId` is nil, reconcile is skipped, and the next *delta* pull upserts the server's skip row under a different id → **two skipped rows for one slot** until a full resync self-heals. Confirm the `skip_dose` ack shape against `api-v1-contract.md` before wiring; if it differs from `log_dose`, the drainer's per-type reconcile-key extraction must be adjusted (a `MedTrackerSync` concern).
+**`skip_dose` reconcile — confirmed safe (contract §4).** `skip_dose` returns `{ id }`, the same result shape as `log_dose`, so wiring it symmetric to `log_dose` (`.doseLog`; the drainer reads the canonical id at `result.result?["id"]`) reconciles correctly, with **no** duplicate-skipped-row risk. (Plan nuance: the `skip_dose` _payload_ is only `{ medicationId }` — the server stamps its own skip time via `logSkippedDose`, so the optimistic local `takenAt: slotExpectedTime` is provisional and is replaced by the server's canonical row on the next pull; verify the post-sync slot re-match against the web behaviour.)
 
 **Offline chain safety:** a `reorder`/`archive`/`log_dose` enqueued against an offline-created med's local cuid2 `X` (before its `upsert` acks) is safe — `Reconciler.remapPendingOutboxPayloads` rewrites `X→Y` inside every still-`pending` payload when the create acks, so the server only ever sees the canonical id.
 
 ### 4.4 Triggering `sync()` after a write — debounced (S4)
 
-Do **not** `await syncEngine.sync()` inline (the optimistic effect is already durable; the UI already updated). Call a **debounced `SyncScheduler.requestSync()`** that **drops if a sync is already in flight**. `SyncEngine` is a reentrant actor whose steps are idempotent, so coalescing is *efficiency, not correctness* — a plain drop-if-in-flight debounce suffices; the single-flight + trailing-"dirty"-re-run machinery is YAGNI and is not built. The scheduler routes through `SessionModel.runSync()` so the 401→re-login rule (§3.3) holds uniformly.
+Do **not** `await syncEngine.sync()` inline (the optimistic effect is already durable; the UI already updated). Call a **debounced `SyncScheduler.requestSync()`** that **drops if a sync is already in flight**. `SyncEngine` is a reentrant actor whose steps are idempotent, so coalescing is _efficiency, not correctness_ — a plain drop-if-in-flight debounce suffices; the single-flight + trailing-"dirty"-re-run machinery is YAGNI and is not built. The scheduler routes through `SessionModel.runSync()` so the 401→re-login rule (§3.3) holds uniformly.
 
-### 4.5 Contract dependency (flagged, §0(c))
+### 4.5 Contract payloads (resolved — contract now in `docs/design/api-v1-contract.md`)
 
-The command `type` strings are known (master §5.3; they appear verbatim in the Phase-1b tests). The **exact payload JSON field names and the command-result shape (where the server id lives)** are contract-owned. Pinned by Phase-1b tests: the `upsert` envelope is `{"medication":{…},"schedules":[…]}` with ack `result.medication.id`; `log_dose` payload includes `medicationId` + `quantity` and acks `result.id`; `refill` payload example is `{}`. **No `edit_dose`, `delete_dose`, `skip_dose`, `adjust_inventory`, `archive`, `unarchive`, or `reorder` payload example exists in-repo.** Copy the contract in before implementation; until then payload objects are placeholders. Note `JSONValue.number` (Double-backed) integer fields (`quantity`, `daysOfWeek`, counts) round-trip whole (JSONEncoder renders `2`, not `2.0`) — verify if any endpoint is strict about integer JSON types.
+The ten command `type` strings and their **exact payloads + result shapes are pinned by the in-repo contract** (`docs/design/api-v1-contract.md` §4). Facts the write layer depends on: `log_dose`/`skip_dose` → `{ id }` (new dose-log id; both reconcile `.doseLog` via `result.id`); `upsert_medication_with_schedules` → `{ medication: <raw row | null> }` (reconcile `.medication` via `result.medication.id`; `null` only on an update whose id isn't found/owned); `edit_dose` → `{ updated: Bool }`, `delete_dose` → `{ deleted: Bool }`, `refill` → `{ previousCount, newCount }`, `adjust_inventory` → `{ previousCount, newCount, quantityChange }`, `archive`/`unarchive` → `{ ok: true }` (none reconcile). **`reorder` is a pairwise swap `{ medId1, medId2 }`** (`swapSortOrder`), not an ordered-list command (§5.2.2). `edit_dose` clears `sideEffects` on explicit `null`, leaves it on `undefined`. `JSONValue.number` integer fields render whole (`2`, not `2.0`).
 
 ---
 
@@ -349,7 +351,7 @@ Every web `use:enhance` success maps to **local GRDB write + `ValueObservation` 
 
 The sidebar's first destination — a **read-mostly aggregation surface** driven by one `ValueObservation` over `medication`, `medication_schedule`, `dose_log`, plus a single root time ticker for live counters. Its only writes are the two synced quick-actions (log, skip).
 
-**5.1.0 Shared inputs (resolved once per emission by `DashboardStore`):** `tz` from `Profile.timezone` (`TimeZone(identifier:)`, fall back to `UTC`, never `TimeZone.current`); `now = Date()` at emission (DB-state clock, separate from the ticker's live clock); `dayStart/dayEnd` via `startOfDay(now, timeZone: tz)` and start-of-next-local-day (Calendar-based, DST-safe); `activeMedIds` = `Medication.filter(is_archived == false).order(sort_order)` (zero → onboarding CTA); `schedulesByMedId` filtered to the effective window (`effectiveFrom ≤ now`, `effectiveTo == nil ‖ > now`) and adapted to `[ScheduleRow]`; `todaysDoses` = `DoseLog` in `[dayStart, dayEnd)` as `[DoseEvent]`; `lastTakenByMed` = most-recent `taken` per med; `slotsByMed` = `computeScheduleSlots(medications:schedulesByMedId:todaysDoses:lastTakenByMed:dayStart:dayEnd:timeZone:now:)` (`Schedule.swift`) — the single source for My-Day, Today feed, and SummaryStrip counts. Core functions are pure and cheap, so the VM recomputes the derived tree on each emission; live *time* is handled separately and never re-queries the DB.
+**5.1.0 Shared inputs (resolved once per emission by `DashboardStore`):** `tz` from `Profile.timezone` (`TimeZone(identifier:)`, fall back to `UTC`, never `TimeZone.current`); `now = Date()` at emission (DB-state clock, separate from the ticker's live clock); `dayStart/dayEnd` via `startOfDay(now, timeZone: tz)` and start-of-next-local-day (Calendar-based, DST-safe); `activeMedIds` = `Medication.filter(is_archived == false).order(sort_order)` (zero → onboarding CTA); `schedulesByMedId` filtered to the effective window (`effectiveFrom ≤ now`, `effectiveTo == nil ‖ > now`) and adapted to `[ScheduleRow]`; `todaysDoses` = `DoseLog` in `[dayStart, dayEnd)` as `[DoseEvent]`; `lastTakenByMed` = most-recent `taken` per med; `slotsByMed` = `computeScheduleSlots(medications:schedulesByMedId:todaysDoses:lastTakenByMed:dayStart:dayEnd:timeZone:now:)` (`Schedule.swift`) — the single source for My-Day, Today feed, and SummaryStrip counts. Core functions are pure and cheap, so the VM recomputes the derived tree on each emission; live _time_ is handled separately and never re-queries the DB.
 
 ```
 DashboardView (ScrollView)
@@ -362,7 +364,7 @@ DashboardView (ScrollView)
    └─ TodayFeed        (overdue rows + Skip; per-med TimeSince) — WRITE (skip)
 ```
 
-**5.1.1 SummaryStrip.** READ (no new fetch beyond one history read): slot tallies from `slotsByMed`; adherence-today = `adherencePercent(taken:expected:)` (caps 100, 1-decimal parity), with the *denominator choice* (all-day vs due-so-far) flagged (§8-#12); streak = `calculateStreak(dateStringsNewestFirst:, today:)` where the VM builds distinct `localDateString(...)` over **all** `taken` doses newest-first — an unbounded-range aggregation (§8-#3d). WRITE: none.
+**5.1.1 SummaryStrip.** READ (no new fetch beyond one history read): slot tallies from `slotsByMed`; adherence-today = `adherencePercent(taken:expected:)` (caps 100, 1-decimal parity), with the _denominator choice_ (all-day vs due-so-far) flagged (§8-#12); streak = `calculateStreak(dateStringsNewestFirst:, today:)` where the VM builds distinct `localDateString(...)` over **all** `taken` doses newest-first — an unbounded-range aggregation (§8-#3d). WRITE: none.
 
 **5.1.2 RefillsCard.** READ per active med: `dailyRate = dailyRateFor(scheduleRows:legacyScheduleType:legacyIntervalHours:thirtyDayTakenQuantity:)`; `days = daysUntilRefill(inventoryCount:dailyRate:)` = `floor(inv/rate)`; `severity = classifyRefillSeverity(days:)` (critical ≤3, warning ≤7, watch ≤14, else ok). Low-inventory chip is a separate record check (`inventoryCount != nil && ≤ inventoryAlertThreshold`). `.ok` hidden; sorted by days ascending. Per master §15 the card uses **only** this schedule-aware forecast — it does **not** surface the legacy `calculateDaysUntilRefill` number. `thirtyDayTakenQuantity` needs a new `SUM(quantity)` aggregation (§8-#3b). WRITE: none.
 
@@ -370,7 +372,7 @@ DashboardView (ScrollView)
 
 **5.1.4 QuickLogBar (primary write; ⌘1–9).** READ: active meds' name + styling; qty constrained **1–10** (default 1). **`⌘1–9` quick-logs the Nth active medication** (§2.5), suppressed while text-editing. WRITE — quick-log (optimistic + enqueue, one txn): insert `DoseLog(id:createId(), status:"taken", quantity:qty, takenAt:now, loggedAt:now, updatedAt:now)`; `inventoryCount = max(0, prev − qty)`; enqueue `log_dose` with `localEntityId: doseId, localEntityKind: .doseLog`. Confirmed keys `medicationId`, `quantity`; remaining keys contract-dependent (§8-#10). Reconciliation is already wired (drainer reads `result.result?["id"]`, rewrites `dose_log.id` X→Y; next delta pull upserts the canonical row).
 
-**5.1.5 TodayFeed + TimeSince + Skip.** READ: overdue set = slots `status == .overdue`; TimeSince = `formatTimeSince(lastTakenByMed[medId], now: tickDate)` ("just now"/"{m}m ago"/…/"Not yet taken"); due-in = `formatDueIn(msUntilDue:)`; interval meds' badge from `computeTimingStatus(intervalHours:lastEventAt:now:)`. WRITE — skip an overdue slot (optimistic + enqueue, one txn): insert `DoseLog(status:"skipped", takenAt: slot.expectedTime, loggedAt:now)`; **no inventory change**; enqueue `skip_dose` `localEntityKind: .doseLog`. The optimistically-inserted skipped dose re-enters `todaysDoses` next emission, so `computeScheduleSlots` re-matches the slot to `.skipped` and it drops from the feed — no manual UI removal. **Reconcile caveat (§4.3†, §8-#10):** confirm `skip_dose`'s ack id-path before relying on `.doseLog` reconcile, else risk duplicate skipped rows until a full resync.
+**5.1.5 TodayFeed + TimeSince + Skip.** READ: overdue set = slots `status == .overdue`; TimeSince = `formatTimeSince(lastTakenByMed[medId], now: tickDate)` ("just now"/"{m}m ago"/…/"Not yet taken"); due-in = `formatDueIn(msUntilDue:)`; interval meds' badge from `computeTimingStatus(intervalHours:lastEventAt:now:)`. WRITE — skip an overdue slot (optimistic + enqueue, one txn): insert `DoseLog(status:"skipped", takenAt: slot.expectedTime, loggedAt:now)`; **no inventory change**; enqueue `skip_dose` `localEntityKind: .doseLog`. The optimistically-inserted skipped dose re-enters `todaysDoses` next emission, so `computeScheduleSlots` re-matches the slot to `.skipped` and it drops from the feed — no manual UI removal. Reconcile is confirmed safe — `skip_dose` returns `{ id }` like `log_dose` (contract §4).
 
 **Live-counter strategy.** One shared ticker at `DashboardView` root: `TimelineView(.periodic(from: .now, by: 30))`; its `context.date` threads to every `formatTimeSince`/`formatDueIn`/`computeTimingStatus`. 30 s bounds the `due_now`/`overdue` flip lag to ≤30 s while staying cheap. DB state and time are decoupled — the ticker never touches GRDB. Reduce-motion (`@Environment(\.accessibilityReduceMotion) ‖ Settings.reducedMotion`) does **not** stop the counters (they are information) — it only suppresses the transition on value change and the success flash.
 
@@ -405,11 +407,11 @@ MedicationDetailView(id)
 
 **5.2.1 List READ — `MedicationCardVM`.** One `ValueObservation` returning active + archived VMs: fetch medications (`order(sort_order)`, partition on `isArchived`), schedules grouped `[medId:[ScheduleRow]]`, and three aggregations (§8-#3a/b/c): 14-day taken-quantity per `localDate`; 30-day taken-quantity per med; 7-day taken count + last-taken per med. Per card: swatch via `renderedColours`/`getReadableTextColor`; refill chip + "~Nd left" from the **single** `dailyRateFor → daysUntilRefill → classifyRefillSeverity` pipeline (never legacy `calculateDaysUntilRefill`, master §15); low-inventory chip (record check); adherence mini-bar = `adherencePercent(taken: taken7, expected: jsRound(expectedPerDay(forSchedules:) × clampEffectiveDays(rangeFrom: now-7d, rangeTo: now, startedAt:, endedAt:)))`; 14-day sparkline = `buildSparklineShape(...)` → `Path` in a `Canvas`; timing badge (§5.2.5).
 
-**5.2.2 List WRITE — reorder / archive.** Reorder (`.onMove`): recompute contiguous `sortOrder` for affected active meds in one txn (state only), enqueue one `reorder` with the ordered id list, no `localEntityId`. Archive/Unarchive: optimistic `is_archived`/`archived_at`/`updated_at`, **no** local `audit_log`, enqueue `archive`/`unarchive` `{medicationId}`, no `localEntityId`. Payload shapes contract-owned (§8-#10).
+**5.2.2 List WRITE — reorder / archive.** Reorder (`.onMove`): the contract's `reorder` is a **pairwise swap** `{medId1, medId2}` (`swapSortOrder`), not an ordered-list command — decompose a move into the adjacent-swap sequence that realizes it: renumber the affected `sortOrder` span locally (state only) and enqueue one `reorder` per adjacent swap, no `localEntityId`. (Simplest faithful fallback: move-up/move-down controls = one swap = one command.) Archive/Unarchive: optimistic `is_archived`/`archived_at`/`updated_at`, **no** local `audit_log`, enqueue `archive`/`unarchive` `{medicationId}`, no `localEntityId`. Payload shapes contract-owned (§8-#10).
 
 **5.2.3 Form modelling.** `@Observable MedicationDraft` projects on save to `MedicationFields(name, dosageAmount:String, dosageUnit, form, category, colour, colourSecondary:String?, pattern, notes:String?, scheduleType, scheduleIntervalHours, inventoryCount:Int?, inventoryAlertThreshold:Int?)` and `[MedicationScheduleInput(scheduleKind, timeOfDay:String?, intervalHours:String?, daysOfWeek:[Int]?, sortOrder, effectiveFrom:Date, effectiveTo:Date?)]`. **StylePicker:** secondary well enabled only when `pattern != .solid`; live preview recomputes `getReadableTextColor` on change. **ScheduleSection:** interval → `intervalHours`; fixed_time → `timeOfDay` (`HH:mm`) + `daysOfWeek` (0=Sun…6=Sat, empty ⇒ every day, stored nil); prn → all nil. `effectiveFrom` defaults to `now`; `sortOrder = row index`.
 
-**Client-side validation (master §8.1, before the optimistic write; the DB `CHECK` is the backstop):** `name` 1–200; `dosageAmount` `^\d+(\.\d+)?$`; `dosageUnit` 1–20; `notes` ≤1000; `pattern ∈ MedicationPattern`; `form`/`category` ∈ enum (**allowed values not in any package — §8-#11**); interval `0 < h ≤ 72`; `timeOfDay` `^([01]\d|2[0-3]):[0-5]\d$`; `daysOfWeek` ints 0–6, ≤7; **1–20 rows** per med; inventory ints ≥ 0.
+**Client-side validation (master §8.1, before the optimistic write; the DB `CHECK` is the backstop):** `name` 1–200; `dosageAmount` `^\d+(\.\d+)?$`; `dosageUnit` 1–20; `notes` ≤1000; `pattern ∈ MedicationPattern`; `form` ∈ {tablet, capsule, liquid, softgel, patch, injection, inhaler, drops, cream, other}; `category` ∈ {prescription, otc, supplement} (contract §4); interval `0 < h ≤ 72`; `timeOfDay` `^([01]\d|2[0-3]):[0-5]\d$`; `daysOfWeek` ints 0–6, ≤7; **1–20 rows** per med; inventory ints ≥ 0.
 
 **5.2.4 Form WRITE — `upsert_medication_with_schedules`.** One optimistic txn on state tables + enqueue (§4.2). **Create:** `medId = createId()`; insert `medication` + `medication_schedule` rows; no `audit_log`; enqueue `localEntityId: medId, localEntityKind: .medication`. **Update:** update `medication`; **replace all** schedule rows (deleteAll then insert — mirrors `updateMedicationWithSchedules` minus audit); enqueue with **no** `localEntityId` (the next pull replaces the med's schedules wholesale). Envelope `{"medication":{…},"schedules":[…]}`, ack `result.medication.id`; inner field names/casing contract-owned (§8-#10). Because the synced path cannot call `MedicationRepository` (it writes audit rows), the per-kind `makeSchedule` normalization (`private`) must be **replicated in a new thin state-only writer** (§8-#5) so the `CHECK` isn't tripped.
 
@@ -465,6 +467,7 @@ Dark-only theme (master §10.2). Glass panels → `.ultraThinMaterial`/`.thinMat
 Mock-first, network-free `swift test`, matching Phase 1a/1b discipline; live backend / real Keychain / SIWA are a **manual, backend-gated smoke pass**, not a CI gate. `swift-snapshot-testing` is the only new test-only dependency, wired into the snapshot target only.
 
 **7.1 Logic unit tests (`MedTrackerApp`, in-memory GRDB + `MockTransport` + `InMemoryTokenStore`):**
+
 - **Optimistic-write layer** — for each of the ten commands: assert the effect touches **only** state tables and writes **no** local `inventory_event`/`audit_log`; assert exactly one `OutboxEntry` enqueued **in the same transaction** — **roll back the write block and assert neither the state row nor the outbox row landed** (the §4.2 atomicity invariant); assert `payload` JSON + `type` match the contract; then drive `SyncEngine.sync()` against a scripted `MockTransport` and assert server rows replace the optimistic ones (incl. `.medication`/`.doseLog` reconcile and the offline create-then-log remap chain).
 - **Adapters** — record→lean-model mapping before every Core call (highest-risk seam, pure-in/pure-out).
 - **Date bucketing** — `Time.localDateString`/`startOfDay`/`localDayOfWeek` fed from **synced `Profile.timezone`** with injected fixed `now`/tz (the §15 device-tz-vs-user-tz fix).
@@ -507,8 +510,8 @@ Consolidated; conflicts resolved.
 
 **Needs the out-of-sandbox `api-v1-contract.md` (copy-in required, §0(c)) or web source:**
 
-10. **Exact command payload JSON shapes** for all ten commands (inner `medication`/`schedules[]` field names+casing; `refill`/`adjust_inventory` bodies; `edit_dose`/`delete_dose` id key + wire date format + null-clearing; `reorder` batch-vs-per-med) — **and the `skip_dose` ack id-path**: confirm it returns the canonical id at `result.result?["id"]` (as `log_dose` does) before wiring `.doseLog` reconcile; if it differs, adjust the drainer's per-type reconcile-key extraction, else risk duplicate skipped rows until a full resync (§4.3†, §5.1.5). Pinned from Phase-1b tests: the `upsert` envelope + ack `result.medication.id`, `log_dose`'s `medicationId`/`quantity` + ack `result.id`. Everything else is contract-owned — do not invent.
-11. **`form` and `category` allowed enum values** — `MedicationPattern` (8 cases) is in-repo, but `form`/`category` sets are nowhere in the packages (tests use literals `"tablet"`, `"otc"`); the FormPicker/CategoryPicker lists + validation need them.
+10. **Command payloads + result shapes — RESOLVED** (contract now in `docs/design/api-v1-contract.md` §4; see §4.5). All ten payloads/results are pinned. Corrections vs the earlier assumption: **`reorder` is a pairwise swap `{medId1, medId2}`** (not an ordered list, §5.2.2), and **`skip_dose` returns `{ id }`** (safe reconcile, §4.3). Remaining nuances to verify at implementation: whether `edit_dose` clears `notes` on explicit `null` (only `sideEffects`-null is documented as clearing), and integer-JSON strictness (`JSONValue.number` renders whole numbers without `.0`).
+11. **`form`/`category` enums — RESOLVED** (contract §4): `form` = {tablet, capsule, liquid, softgel, patch, injection, inhaler, drops, cream, other}; `category` = {prescription, otc, supplement}; `pattern` = the 8 `MedicationPattern` cases; `scheduleType` = {scheduled, as_needed}.
 12. **Exact copy strings** — **the verbatim medical disclaimer** (first-run consent gate §3.1 + med-form notice §5.2, sourced from the web registration-consent / disclaimer component), the success-toast text, validation messages, the SummaryStrip metric labels + adherence denominator (all-day vs due-so-far), RefillsCard copy, and the onboarding CTA copy live in the SvelteKit components (out of sandbox). The spec pins behaviours, not literal strings.
 13. **Confirm SQLite json1** in the deployment SQLite (system SQLite on macOS 15 ships it — flag to confirm; the fallback is a fragile `LIKE` or an in-Swift post-filter that breaks the paged window).
 14. **Grouping/sort key `taken_at` vs `logged_at`** — this design groups/sorts History on `taken_at`; the web `/log` may use `logged_at`. Confirm before locking parity.
