@@ -2,6 +2,7 @@ import Foundation
 import GRDB
 import MedTrackerData
 @testable import MedTrackerSync
+import MedTrackerTestSupport
 import Testing
 
 private func makeDrainer(_ db: DatabaseQueue, _ t: MockTransport) -> (OutboxDrainer, OutboxStore) {
