@@ -6,13 +6,14 @@ import MedTrackerData
 ///
 /// `apply(_:)` runs the whole response in a single `dbWriter.write { db in
 /// ... }` transaction and branches on `response.fullResync`:
-/// - `false` (this task) — the delta-apply branch: per-row upserts, plus a
-///   wholesale replace of each touched medication's `medication_schedule`
-///   rows, plus tombstone deletes.
-/// - `true` (Task 11) — the full-resync branch: wipes and reloads every
-///   synced table from the response. Stubbed here with `fatalError` so any
-///   accidental full-resync call surfaces immediately rather than silently
-///   no-opping; Task 11 replaces the stub.
+/// - `false` — the delta-apply branch: per-row upserts, plus a wholesale
+///   replace of each touched medication's `medication_schedule` rows, plus
+///   tombstone deletes.
+/// - `true` — the full-resync branch: wipes every synced table and reloads
+///   it wholesale from the response. Tombstones are ignored on full resync
+///   (the wholesale replace already reflects the server's current state).
+///   Local-only tables (`OutboxEntry`, `SyncState`, `ReminderEvent`) are
+///   never touched by either branch.
 public struct SyncApplier: Sendable {
     /// Wire `entityType` → local table name, whitelisted per contract §3.
     /// Unknown entity types are ignored rather than throwing, since the
@@ -40,11 +41,51 @@ public struct SyncApplier: Sendable {
         }
     }
 
-    /// Task 11 fills this in. Left as a stub (rather than a silent no-op)
-    /// so a full-resync response hitting this branch before Task 11 lands
-    /// fails loudly instead of dropping data on the floor.
-    private static func applyFull(_: Database, _: SyncResponse) throws {
-        fatalError("SyncApplier.applyFull is not implemented yet (Task 11)")
+    /// The `fullResync == true` branch (contract §3 full-resync rules).
+    /// Wipes every synced table (children first, then parents, so no FK
+    /// violates mid-delete even though the schema's cascades would also
+    /// cover it), then inserts the response wholesale: medications first
+    /// (so their schedules' FKs hold), then dose logs / inventory events /
+    /// audit logs, then profile / preferences. Tombstones are ignored — a
+    /// full resync already reflects the server's current state, so there's
+    /// nothing left for a tombstone to delete. Runs inside the caller's
+    /// `dbWriter.write` transaction, so any failure (e.g. a bad FK) rolls
+    /// back everything, including the wipe.
+    private static func applyFull(_ db: Database, _ response: SyncResponse) throws {
+        try DoseLog.deleteAll(db)
+        try InventoryEvent.deleteAll(db)
+        try AuditLog.deleteAll(db)
+        try MedicationSchedule.deleteAll(db)
+        try Medication.deleteAll(db)
+        try Profile.deleteAll(db)
+        try Settings.deleteAll(db)
+
+        for w in response.medications {
+            try WireMapping.medication(w).insert(db)
+            for s in w.schedules {
+                try WireMapping.schedule(s).insert(db)
+            }
+        }
+
+        for w in response.doseLogs {
+            try WireMapping.doseLog(w).insert(db)
+        }
+
+        for w in response.inventoryEvents {
+            try WireMapping.inventoryEvent(w).insert(db)
+        }
+
+        for w in response.auditLogs {
+            try WireMapping.auditLog(w).insert(db)
+        }
+
+        if let profile = response.profile {
+            try WireMapping.profile(profile, now: 0).insert(db)
+        }
+
+        if let preferences = response.preferences {
+            try WireMapping.settings(preferences).insert(db)
+        }
     }
 
     /// The `fullResync == false` branch (contract §3 delta rules).
