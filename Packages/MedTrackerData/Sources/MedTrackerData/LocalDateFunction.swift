@@ -16,6 +16,9 @@ private final class TimeZoneCache: @unchecked Sendable {
         if let cached = cache[identifier] {
             return cached
         }
+        // Deliberate silent fallback to UTC on an unresolvable IANA id — SQL
+        // scalar functions can't throw, so there's no error channel to surface
+        // a bad identifier through; this is intentional, not an oversight.
         let resolved = TimeZone(identifier: identifier) ?? TimeZone(identifier: "UTC")!
         cache[identifier] = resolved
         return resolved
