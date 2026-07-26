@@ -1,5 +1,6 @@
 import Foundation
 @testable import MedTrackerSync
+import MedTrackerTestSupport
 import Testing
 
 private let dec = JSONDecoder()
