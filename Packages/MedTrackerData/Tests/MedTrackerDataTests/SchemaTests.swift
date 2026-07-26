@@ -279,7 +279,7 @@ struct SchemaTests {
         try dbQueue.write { db in
             var entry = OutboxEntry(
                 id: "o1", commandType: "upsert_medication_with_schedules",
-                payload: "{}", idempotencyKey: "k1", createdAt: 0,
+                payload: "{}", idempotencyKey: "k1", createdAt: 0
             )
             entry.localEntityId = "localMed1"
             entry.localEntityKind = "medication"

@@ -16,6 +16,8 @@ included:
   - Packages/MedTrackerCore/Tests
   - Packages/MedTrackerData/Sources
   - Packages/MedTrackerData/Tests
+  - Packages/MedTrackerSync/Sources
+  - Packages/MedTrackerSync/Tests
 
 disabled_rules:
   # The ported math/geometry/date code uses the TS source's short local names

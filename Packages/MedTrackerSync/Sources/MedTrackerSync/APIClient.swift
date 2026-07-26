@@ -85,8 +85,11 @@ public struct APIClient: Sendable {
                 retryAfterHeader: resp.value(forHTTPHeaderField: "Retry-After")
             )
         }
-        do { return try JSONDecoder().decode(Out.self, from: data) }
-        catch { throw APIError.decoding(String(describing: error)) }
+        do {
+            return try JSONDecoder().decode(Out.self, from: data)
+        } catch {
+            throw APIError.decoding(String(describing: error))
+        }
     }
 }
 

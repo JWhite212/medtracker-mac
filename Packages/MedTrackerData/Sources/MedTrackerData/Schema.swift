@@ -594,7 +594,7 @@ public struct OutboxEntry: Codable, Equatable, Sendable, Identifiable, Fetchable
     public var attemptCount: Int
     public var lastError: String?
     public var localEntityId: String?
-    public var localEntityKind: String?    // "medication" | "dose_log"
+    public var localEntityKind: String? // "medication" | "dose_log"
     public var createdAt: Double
 
     enum CodingKeys: String, CodingKey {

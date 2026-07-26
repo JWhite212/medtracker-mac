@@ -40,7 +40,9 @@ public struct OutboxStore: Sendable {
         localEntityKind: EntityKind? = nil
     ) throws -> OutboxEntry {
         let payloadData = try JSONEncoder().encode(payload)
-        let payloadJSON = String(decoding: payloadData, as: UTF8.self)
+        // JSONEncoder always emits valid UTF-8, so the failable initializer
+        // SwiftLint prefers here can never return nil.
+        let payloadJSON = String(data: payloadData, encoding: .utf8)!
 
         let entry = OutboxEntry(
             id: createId(),

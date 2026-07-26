@@ -62,7 +62,9 @@ public struct Reconciler: Sendable {
             guard remapped != original else { continue }
 
             let payloadData = try encoder.encode(remapped)
-            let payloadJSON = String(decoding: payloadData, as: UTF8.self)
+            // JSONEncoder always emits valid UTF-8, so the failable initializer
+            // SwiftLint prefers here can never return nil.
+            let payloadJSON = String(data: payloadData, encoding: .utf8)!
             try db.execute(
                 sql: "UPDATE outbox SET payload = ? WHERE id = ?",
                 arguments: [payloadJSON, entry.id]
