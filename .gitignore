@@ -18,3 +18,4 @@ xcuserdata/
 
 # XcodeGen output: track the project, not per-user state
 *.xcodeproj/project.xcworkspace/xcuserdata/
+.superpowers/
