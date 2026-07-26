@@ -1,7 +1,8 @@
 import Foundation
 
-/// Thin `/api/v1` client. Every endpoint is a one-line call into the private `post` helper,
-/// which owns request construction, error mapping (`APIError.from`), and decoding.
+/// Thin `/api/v1` client. Every endpoint is a one-line call into the private `post`/`get`
+/// helpers, which share request construction, error mapping (`APIError.from`), and decoding
+/// via `send`.
 public struct APIClient: Sendable {
     private let config: SyncConfig
     private let transport: HTTPTransport
@@ -37,6 +38,21 @@ public struct APIClient: Sendable {
         return (response.token, response.user)
     }
 
+    /// `GET /sync` (contract §3) — pulls the delta (or full resync) since `since`, guarded by
+    /// `epoch` so the server can force a full resync when the account's sync epoch has bumped.
+    public func sync(since: String?, epoch: Int, token: String) async throws -> SyncResponse {
+        var queryItems = [URLQueryItem(name: "epoch", value: String(epoch))]
+        if let since { queryItems.append(URLQueryItem(name: "since", value: since)) }
+        return try await get("sync", queryItems: queryItems, bearer: token, decode: SyncResponse.self)
+    }
+
+    /// `POST /commands` (contract §4) — submits the outbox as an idempotent command batch.
+    public func runCommands(_ commands: [WireCommand], token: String) async throws -> CommandsResponse {
+        try await post(
+            "commands", body: CommandEnvelope(commands: commands), bearer: token, decode: CommandsResponse.self
+        )
+    }
+
     private func post<Out: Decodable>(
         _ path: String, body: some Encodable, bearer: String? = nil, decode _: Out.Type
     ) async throws -> Out {
@@ -45,6 +61,23 @@ public struct APIClient: Sendable {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let bearer { req.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization") }
         req.httpBody = try JSONEncoder().encode(body)
+        return try await send(req, decode: Out.self)
+    }
+
+    private func get<Out: Decodable>(
+        _ path: String, queryItems: [URLQueryItem], bearer: String, decode _: Out.Type
+    ) async throws -> Out {
+        var components = URLComponents(
+            url: config.baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false
+        )!
+        components.queryItems = queryItems
+        var req = URLRequest(url: components.url!)
+        req.httpMethod = "GET"
+        req.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization")
+        return try await send(req, decode: Out.self)
+    }
+
+    private func send<Out: Decodable>(_ req: URLRequest, decode _: Out.Type) async throws -> Out {
         let (data, resp) = try await transport.send(req)
         guard (200 ... 299).contains(resp.statusCode) else {
             throw APIError.from(
