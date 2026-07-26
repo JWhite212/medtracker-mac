@@ -92,9 +92,26 @@ private let now = d("2026-04-15T14:30:00Z")
 //
 // America/New_York: spring-forward 2026-03-08 02:00→03:00, fall-back
 // 2026-11-01 02:00→01:00. Values below were DISCOVERED by running Foundation,
-// then PINNED, and each cross-checked against the TS `localTimeOnDateToUtc`
-// offset-subtraction result (schedule.ts:74-101), computed in Node.
-// Result: Foundation and JS AGREE on both hard cases (no divergence).
+// then PINNED.
+//
+// IMPORTANT — the "AGREE with the web" claim below applies ONLY to the two
+// `wallClockToUTC` cases (spring-forward gap, fall-back ambiguous hour).
+// Those were each cross-checked against the TS `localTimeOnDateToUtc`
+// offset-subtraction result (schedule.ts:74-101), computed in Node, and
+// Foundation and JS agree byte-for-byte on both.
+//
+// `startOfDay` is a DIFFERENT story: on DST-transition days it INTENTIONALLY
+// DIVERGES from the web. The web's `startOfDay` (time.ts:168-194) samples the
+// local UTC offset at *noon* and applies it uniformly, which is wrong exactly
+// on the two days per year the offset changes:
+//   - Spring 2026-03-08T17:00Z → web gives 2026-03-08T04:00:00Z (23:00 the
+//     PRIOR day — wrong); Foundation gives 2026-03-08T05:00:00Z (00:00 EST —
+//     correct local midnight).
+//   - Fall 2026-11-01T17:00Z → web gives 2026-11-01T05:00:00Z (01:00 — wrong);
+//     Foundation gives 2026-11-01T04:00:00Z (00:00 EDT — correct).
+// Decision: keep Foundation's correct behavior. The pinned values below are
+// Foundation's CORRECT local-midnight instants, not values that match the
+// web's (buggy) output. See docs/PARITY-DIVERGENCES.md for the full writeup.
 
 @Test func startOfDay_springForwardDay() {
     // 2026-03-08 is a 23-hour day in NYC. Local midnight is still well-defined.
@@ -102,7 +119,18 @@ private let now = d("2026-04-15T14:30:00Z")
     let sod = startOfDay(noonUTC, timeZone: nyc)
     #expect(localDateString(sod, timeZone: nyc) == "2026-03-08")
     // Local midnight 2026-03-08 00:00 is still EST (offset -5) = 05:00 UTC.
+    // (The web's startOfDay wrongly returns 2026-03-08T04:00:00Z here.)
     #expect(sod == d("2026-03-08T05:00:00Z"))
+}
+
+@Test func startOfDay_fallBackDay() {
+    // 2026-11-01 is a 25-hour day in NYC (clocks fall back 02:00→01:00).
+    let afternoonUTC = d("2026-11-01T17:00:00Z")  // ~13:00 EDT (pre-rollback), midday on 11-01
+    let sod = startOfDay(afternoonUTC, timeZone: nyc)
+    #expect(localDateString(sod, timeZone: nyc) == "2026-11-01")
+    // Local midnight 2026-11-01 00:00 is still EDT (offset -4) = 04:00 UTC.
+    // (The web's startOfDay wrongly returns 2026-11-01T05:00:00Z here.)
+    #expect(sod == d("2026-11-01T04:00:00Z"))
 }
 
 @Test func wallClock_insideSpringForwardGap() {
