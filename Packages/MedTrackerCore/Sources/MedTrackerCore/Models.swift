@@ -4,10 +4,13 @@ import Foundation
 
 /// Mirrors the TS `MedicationSchedule.scheduleKind` discriminated union
 /// (`"interval" | "fixed_time" | "prn"`, `src/lib/server/schedules.ts`).
-public enum ScheduleKind: Equatable, Hashable {
-    case interval
-    case fixedTime
-    case prn
+/// The raw value is the exact web string — used verbatim in
+/// `overdueDedupeKey` (`Reminders.swift`) so dedupe-key identifiers match the
+/// web app's byte-for-byte.
+public enum ScheduleKind: String, Equatable, Hashable {
+    case interval = "interval"
+    case fixedTime = "fixed_time"
+    case prn = "prn"
 }
 
 /// A single schedule row for a medication, as consumed by
