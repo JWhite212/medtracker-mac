@@ -4,10 +4,16 @@ import MedTrackerData
 @testable import MedTrackerSync
 import Testing
 
-private func makeDrainer(_ db: DatabaseQueue, _ t: MockTransport) -> (OutboxDrainer, OutboxStore) {
+private func makeDrainer(
+    _ db: DatabaseQueue, _ t: MockTransport, maxCommandsPerRequest: Int = 200
+) -> (OutboxDrainer, OutboxStore) {
     let api = APIClient(config: SyncConfig(baseURL: URL(string: "https://x.test/api/v1")!), transport: t)
     let outbox = OutboxStore(dbWriter: db)
-    return (OutboxDrainer(apiClient: api, dbWriter: db, outbox: outbox), outbox)
+    return (
+        OutboxDrainer(
+            apiClient: api, dbWriter: db, outbox: outbox, maxCommandsPerRequest: maxCommandsPerRequest
+        ), outbox
+    )
 }
 
 // The beta toolchain's overload resolution prefers GRDB's `async` `write`/`read`
@@ -61,5 +67,27 @@ private func read<T>(_ db: DatabaseQueue, _ work: @escaping (Database) throws ->
     try read(db) { d in
         try #expect(OutboxEntry.fetchOne(d, key: a.id)?.status == "failed")
         try #expect(OutboxEntry.fetchOne(d, key: b.id)?.status == "pending") // left for next sync
+    }
+}
+
+@Test func drainAppliesEarlierChunkBeforeLaterChunkAborts() async throws {
+    let db = try MedTrackerDatabase.open()
+    let t = MockTransport()
+    let (drainer, outbox) = makeDrainer(db, t, maxCommandsPerRequest: 1)
+    let a = try outbox.enqueue(type: "refill", payload: .object([:]))
+    let b = try outbox.enqueue(type: "refill", payload: .object([:]))
+
+    // Chunk 1 (entry a) succeeds...
+    t.enqueue(status: 200, json: #"{"results":[{"id":"\#(a.idempotencyKey)","ok":true,"result":null}]}"#)
+    // ...but chunk 2 (entry b) fails at the transport level, aborting the drain.
+    t.enqueue(status: 500, json: #"{"message":"boom"}"#)
+
+    await #expect(throws: APIError.server(status: 500)) {
+        _ = try await drainer.drain(token: "tok")
+    }
+
+    try read(db) { d in
+        try #expect(OutboxEntry.fetchOne(d, key: a.id)?.status == "sent") // durable despite later abort
+        try #expect(OutboxEntry.fetchOne(d, key: b.id)?.status == "pending") // never attempted
     }
 }
