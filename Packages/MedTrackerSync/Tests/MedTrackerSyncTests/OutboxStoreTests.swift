@@ -41,6 +41,41 @@ import Testing
     #expect(try store.pending().map(\.id) == [first.id, second.id]) // created_at, then rowid tiebreak
 }
 
+/// Forces a real `created_at` collision (three rows share the exact same
+/// timestamp) and asserts `pending()` falls back to `rowid` — i.e. insertion
+/// order — to break the tie. Ids are chosen so their ascending string sort
+/// disagrees with insertion order, so a query that accidentally ordered by
+/// `id` instead of `rowid` would produce a different, and therefore failing,
+/// result.
+@Test func pendingBreaksCreatedAtTieByRowid() throws {
+    let db = try MedTrackerDatabase.open()
+    let store = OutboxStore(dbWriter: db)
+    let collidingCreatedAt = 100.0
+
+    let rows = [
+        OutboxEntry(
+            id: "z_first", commandType: "a", payload: "{}",
+            idempotencyKey: "idem_z_first", createdAt: collidingCreatedAt
+        ),
+        OutboxEntry(
+            id: "m_second", commandType: "b", payload: "{}",
+            idempotencyKey: "idem_m_second", createdAt: collidingCreatedAt
+        ),
+        OutboxEntry(
+            id: "a_third", commandType: "c", payload: "{}",
+            idempotencyKey: "idem_a_third", createdAt: collidingCreatedAt
+        ),
+    ]
+
+    try db.write { db in
+        for row in rows {
+            try row.insert(db)
+        }
+    }
+
+    #expect(try store.pending().map(\.id) == ["z_first", "m_second", "a_third"])
+}
+
 /// Closes a T3 invariant with no committed test: a whole-number `.number` payload field must
 /// round-trip through `JSONEncoder` as an integer literal (`2`), not `2.0` — the `/api/v1`
 /// server-side JSON decoder is strict about numeric shape for some fields.
