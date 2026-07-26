@@ -91,3 +91,57 @@ import Testing
     #expect(payload.contains("\"quantity\":2") || payload.contains("\"quantity\": 2"))
     #expect(!payload.contains("2.0"))
 }
+
+/// §4.2 write-path rule: the optimistic STATE effect and the outbox enqueue must
+/// commit atomically. Rolling back the caller's block (here: a thrown error inside
+/// the same db.write) must leave NEITHER the state row NOR the pending row behind —
+/// proving the tx-joining overload takes no internal transaction of its own.
+@Test func txJoiningEnqueueRollsBackWithCallerBlock() throws {
+    let db = try MedTrackerDatabase.open()
+    let store = OutboxStore(dbWriter: db)
+    struct Boom: Error {}
+
+    #expect(throws: Boom.self) {
+        try db.write { d in
+            try Medication(
+                id: "m1", userId: "u1", name: "Med", dosageAmount: "50", dosageUnit: "mg",
+                form: "tablet", category: "prescription", colour: "#112233",
+                startedAt: 0, createdAt: 0, updatedAt: 0
+            ).insert(d)
+            _ = try store.enqueue(
+                d, type: "log_dose", payload: .object(["medicationId": .string("m1")]),
+                localEntityId: "localDose1", localEntityKind: .doseLog
+            )
+            throw Boom()
+        }
+    }
+
+    try #expect(db.read { try Medication.fetchCount($0) } == 0)
+    try #expect(db.read { try OutboxEntry.fetchCount($0) } == 0)
+}
+
+/// The mirror case: when the caller's block commits, BOTH rows land, and the
+/// returned entry carries the reconciliation fields for the Drainer/Reconciler.
+@Test func txJoiningEnqueueCommitsWithCallerBlock() throws {
+    let db = try MedTrackerDatabase.open()
+    let store = OutboxStore(dbWriter: db)
+
+    let entry = try db.write { d -> OutboxEntry in
+        try Medication(
+            id: "m1", userId: "u1", name: "Med", dosageAmount: "50", dosageUnit: "mg",
+            form: "tablet", category: "prescription", colour: "#112233",
+            startedAt: 0, createdAt: 0, updatedAt: 0
+        ).insert(d)
+        return try store.enqueue(
+            d, type: "log_dose", payload: .object(["medicationId": .string("m1")]),
+            localEntityId: "localDose1", localEntityKind: .doseLog
+        )
+    }
+
+    #expect(entry.status == "pending")
+    #expect(entry.localEntityId == "localDose1")
+    #expect(entry.localEntityKind == "dose_log")
+    #expect(!entry.idempotencyKey.isEmpty)
+    try #expect(db.read { try Medication.fetchCount($0) } == 1)
+    try #expect(db.read { try OutboxEntry.fetchCount($0) } == 1)
+}
