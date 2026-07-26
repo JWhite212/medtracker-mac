@@ -87,6 +87,20 @@ private func makeModel(_ transport: MockTransport,
     #expect(model.phase == .totpChallenge(preAuthToken: "pre_xyz", error: .incorrectCode))
 }
 
+@MainActor
+@Test func verifyCorrectCodeEntersFirstSync() async throws {
+    let t = MockTransport()
+    t.enqueue(status: 200, json: Fixtures.loginTotp)      // reach the challenge
+    t.enqueue(status: 200, json: Fixtures.loginSession)   // /auth/2fa success — {token, user} shape
+    let (model, env, _) = try makeModel(t)
+    await model.signIn(email: "a@b.com", password: "pw")
+    #expect(model.phase == .totpChallenge(preAuthToken: "pre_xyz", error: nil))
+    await model.verify(code: "000000")
+    #expect(model.phase == .firstSync(FirstSyncState(pulledMedications: 0, pulledDoseLogs: 0,
+                                                     isIndeterminate: true)))
+    try #expect(env.tokenStore.load()?.token == "sess_abc")   // session now persisted
+}
+
 // MARK: runSync funnel (§3.3)
 
 @MainActor
