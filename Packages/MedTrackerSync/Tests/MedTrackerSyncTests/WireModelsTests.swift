@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerSync
+import Testing
 
 private let dec = JSONDecoder()
 
@@ -10,7 +10,7 @@ private let dec = JSONDecoder()
     #expect(r.fullResync == false)
     #expect(r.cursor == "2026-07-26T10:00:00.000Z")
     #expect(r.medications.count == 1)
-    #expect(r.medications[0].dosageAmount == "50")        // numeric-as-string preserved
+    #expect(r.medications[0].dosageAmount == "50") // numeric-as-string preserved
     #expect(r.medications[0].scheduleIntervalHours == nil)
     #expect(r.medications[0].schedules[0].intervalHours == "8")
     #expect(r.medications[0].inventoryCount == 30)

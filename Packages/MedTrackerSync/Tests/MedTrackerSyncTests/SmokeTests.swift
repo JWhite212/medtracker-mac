@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerSync
+import Testing
 
 @Test func packageBuildsAndConfigResolves() {
     let cfg = SyncConfig(baseURL: URL(string: "https://example.test/api/v1")!)
