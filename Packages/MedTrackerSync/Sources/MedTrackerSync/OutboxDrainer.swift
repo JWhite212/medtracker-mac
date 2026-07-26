@@ -19,9 +19,9 @@ public struct DrainResult: Equatable, Sendable {
 /// reconciles any locally-generated ids the server assigned canonical
 /// values to.
 ///
-/// `drain(token:)` reads every `"pending"` row, submits them as a single
-/// wire batch (chunked to respect the server's per-request command limit),
-/// then walks the results:
+/// `drain(token:)` reads every `"pending"` row and submits it in chunks
+/// (sized to respect the server's per-request command limit), applying each
+/// chunk's results to the DB **before** requesting the next chunk:
 /// - a successful create both rewrites the local id (via `Reconciler`, Task
 ///   13) and flips the outbox row to `"sent"` inside **one** write
 ///   transaction, so the two changes commit or roll back together — a
@@ -36,11 +36,14 @@ public struct DrainResult: Equatable, Sendable {
 ///   it and the row stays `"failed"` until something re-enqueues it.
 ///
 /// A transport/401/429 error from `runCommands` aborts the whole drain by
-/// rethrowing — whatever chunks already committed stay durable, and the
-/// remaining pending rows are picked up by the next drain.
+/// rethrowing. Because each chunk is fully applied to the DB before the
+/// next chunk's request goes out, an error on chunk N does not undo chunks
+/// 1..N-1 — their entries are already `"sent"`/`"failed"` and durable. Only
+/// the chunk that threw (and any chunks after it) remain `"pending"` for
+/// the next drain to retry.
 public struct OutboxDrainer: Sendable {
     /// The server's per-request command limit (contract §4).
-    private static let chunkSize = 200
+    private let maxCommandsPerRequest: Int
 
     private let apiClient: APIClient
     private let dbWriter: any DatabaseWriter
@@ -48,12 +51,14 @@ public struct OutboxDrainer: Sendable {
     private let reconciler: Reconciler
 
     public init(
-        apiClient: APIClient, dbWriter: any DatabaseWriter, outbox: OutboxStore, reconciler: Reconciler = Reconciler()
+        apiClient: APIClient, dbWriter: any DatabaseWriter, outbox: OutboxStore, reconciler: Reconciler = Reconciler(),
+        maxCommandsPerRequest: Int = 200
     ) {
         self.apiClient = apiClient
         self.dbWriter = dbWriter
         self.outbox = outbox
         self.reconciler = reconciler
+        self.maxCommandsPerRequest = maxCommandsPerRequest
     }
 
     public func drain(token: String) async throws -> DrainResult {
@@ -61,35 +66,40 @@ public struct OutboxDrainer: Sendable {
         guard !entries.isEmpty else { return DrainResult(sent: 0, failed: 0, inProgress: 0) }
 
         let decoder = JSONDecoder()
-        let commands = try entries.map { entry -> WireCommand in
-            let payload = try decoder.decode(JSONValue.self, from: Data(entry.payload.utf8))
-            return WireCommand(id: entry.idempotencyKey, type: entry.commandType, payload: payload)
-        }
+        var tally = DrainResult(sent: 0, failed: 0, inProgress: 0)
 
-        var resultsById: [String: CommandResultDTO] = [:]
-        for chunk in commands.chunked(into: Self.chunkSize) {
-            let response = try await apiClient.runCommands(chunk, token: token)
+        for entryChunk in entries.chunked(into: maxCommandsPerRequest) {
+            let commands = try entryChunk.map { entry -> WireCommand in
+                let payload = try decoder.decode(JSONValue.self, from: Data(entry.payload.utf8))
+                return WireCommand(id: entry.idempotencyKey, type: entry.commandType, payload: payload)
+            }
+
+            // Throwing here (transport/401/429/5xx) aborts the drain, but every
+            // earlier chunk in this loop has already been applied to the DB below —
+            // it stays durable and is not resubmitted.
+            let response = try await apiClient.runCommands(commands, token: token)
+
+            var resultsById: [String: CommandResultDTO] = [:]
             for result in response.results {
                 resultsById[result.id] = result
             }
-        }
 
-        var tally = DrainResult(sent: 0, failed: 0, inProgress: 0)
-        for entry in entries {
-            guard let result = resultsById[entry.idempotencyKey] else {
-                // No result for this entry (shouldn't happen): treat as in_progress.
-                tally.inProgress += 1
-                continue
-            }
+            for entry in entryChunk {
+                guard let result = resultsById[entry.idempotencyKey] else {
+                    // No result for this entry (shouldn't happen): treat as in_progress.
+                    tally.inProgress += 1
+                    continue
+                }
 
-            if result.ok {
-                try applySent(entry: entry, result: result)
-                tally.sent += 1
-            } else if result.error == "in_progress" {
-                tally.inProgress += 1
-            } else {
-                try outbox.markFailed(entry.id, error: result.error ?? "")
-                tally.failed += 1
+                if result.ok {
+                    try applySent(entry: entry, result: result)
+                    tally.sent += 1
+                } else if result.error == "in_progress" {
+                    tally.inProgress += 1
+                } else {
+                    try outbox.markFailed(entry.id, error: result.error ?? "")
+                    tally.failed += 1
+                }
             }
         }
 
