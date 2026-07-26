@@ -1,6 +1,5 @@
 import Foundation
 @testable import MedTrackerSync
-import MedTrackerTestSupport
 import Testing
 
 private func client(_ t: MockTransport) -> APIClient {

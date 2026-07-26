@@ -1,7 +1,6 @@
 import Foundation
 import MedTrackerData
 @testable import MedTrackerSync
-import MedTrackerTestSupport
 import Testing
 
 @Test func parsesISOWithAndWithoutFractional() throws {
