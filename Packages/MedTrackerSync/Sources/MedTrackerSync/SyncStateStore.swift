@@ -46,4 +46,16 @@ public struct SyncStateStore: Sendable {
             try SyncState(tableName: Self.epochKey, cursor: String(epoch), updatedAt: 0).upsert(db)
         }
     }
+
+    /// Writes both `__cursor__` and `__epoch__` inside **one** `dbWriter.write` transaction, so
+    /// a crash between the two writes can never leave a new cursor persisted with the old epoch
+    /// (or vice versa) — `SyncEngine.sync()` uses this instead of two separate
+    /// `saveCursor`/`saveEpoch` calls. Those two remain as independent methods for tests/callers
+    /// that only need to set one of the pair.
+    public func saveCursorAndEpoch(cursor: String, epoch: Int) throws {
+        try dbWriter.write { db in
+            try SyncState(tableName: Self.cursorKey, cursor: cursor, updatedAt: 0).upsert(db)
+            try SyncState(tableName: Self.epochKey, cursor: String(epoch), updatedAt: 0).upsert(db)
+        }
+    }
 }

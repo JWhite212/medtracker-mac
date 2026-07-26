@@ -22,8 +22,14 @@ public struct SyncOutcome: Equatable, Sendable {
 /// `APIClient` (Task 5/6), `OutboxStore` (Task 12), `SyncApplier` (Task 10/11), `OutboxDrainer`
 /// (Task 14), and `SyncStateStore` (Task 8) from its dependencies, and exposes the small surface
 /// (`login`/`verifyTOTP`/`signInWithApple`/`enqueue`/`sync`) that callers outside this package
-/// need. Being an `actor` serializes concurrent `sync()` calls — two overlapping callers can't
-/// interleave a drain/pull/apply/persist sequence and race the local replica.
+/// need. Being an `actor` does **not** mean two overlapping `sync()` calls can't interleave —
+/// Swift actors are reentrant, so a second caller's `sync()` can start running while the first is
+/// suspended at an `await` (e.g. mid-network-request) partway through its own drain/pull/apply/
+/// persist sequence. Overlapping syncs are safe anyway, because every step in that sequence is
+/// idempotent: outbox commands are deduped server-side on their idempotency key (contract §4),
+/// every local write goes through GRDB's serialized `dbWriter` (no two writes race at the SQLite
+/// level), and applying a `/sync` response is a server-authoritative upsert — replaying the same
+/// (or a newer) response twice converges on the same state rather than corrupting it.
 public actor SyncEngine {
     private let apiClient: APIClient
     private let tokenStore: any TokenStore
@@ -90,10 +96,11 @@ public actor SyncEngine {
     }
 
     /// Runs one full sync cycle: push, then pull, then apply, then persist. Each step commits its
-    /// own durable state before the next begins (the drainer commits per-chunk, `SyncApplier`
-    /// commits its whole apply in one transaction, and the cursor/epoch write is last), so a
-    /// crash mid-`sync()` never loses already-durable progress — the next call resumes from
-    /// whatever was last persisted.
+    /// own durable state before the next begins (the drainer commits one command at a time,
+    /// `SyncApplier` commits its whole apply in one transaction, and the cursor+epoch write is
+    /// last, committed together in one transaction via `saveCursorAndEpoch`), so a crash
+    /// mid-`sync()` never loses already-durable progress — the next call resumes from whatever
+    /// was last persisted.
     ///
     /// Throws `APIError.unauthorized` when no session is stored, and otherwise surfaces whatever
     /// `APIError` the drain or pull steps raise (notably `.unauthorized`/`.rateLimited`) rather
@@ -108,8 +115,7 @@ public actor SyncEngine {
         )
         try applier.apply(response)
 
-        try stateStore.saveCursor(response.cursor)
-        try stateStore.saveEpoch(response.epoch)
+        try stateStore.saveCursorAndEpoch(cursor: response.cursor, epoch: response.epoch)
 
         return SyncOutcome(
             fullResync: response.fullResync,
