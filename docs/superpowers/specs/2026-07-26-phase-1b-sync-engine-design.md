@@ -138,9 +138,14 @@ rows.)
 `SyncApplier.apply(_ response: SyncResponse)` runs inside **one** `db.write` transaction:
 
 - **`fullResync == true`:** delete every synced-table row (children before parents, or via cascade),
-  then insert everything in the response. Never touches the local-only tables (`outbox`,
-  `sync_state`, `reminder_event`). `tombstones` are ignored on a full resync (the client is
-  rebuilding from nothing).
+  then insert everything in the response. Leaves `outbox` and `sync_state` untouched (they hold no FK
+  to a synced table). **Caveat (`reminder_event`):** because `reminder_event` carries an
+  `ON DELETE CASCADE` FK to `medication`, wiping medications also cascade-deletes any local
+  `reminder_event` rows — so a full resync does _not_ preserve the reminder ledger. This is **inert in
+  Phase 1b** (`reminder_event` is never written until Phase 2), and is a tracked Phase-2 decision:
+  either snapshot/restore `reminder_event` across the wipe, or switch `applyFull` to a diff-based
+  upsert-and-prune that only deletes medications the server actually dropped. `tombstones` are ignored
+  on a full resync (the client is rebuilding from nothing).
 - **`fullResync == false` (delta):**
   - **medications:** upsert each; for every returned medication, **replace its schedule set
     wholesale** — delete local `medication_schedule` rows for that `medication_id`, then insert the
@@ -191,8 +196,12 @@ also applies the minimal local effect (§7.1) in the same transaction as the enq
 
 ### 7.3 Drain (`OutboxDrainer.swift`)
 
-Drain pending entries **FIFO** (`created_at` order) via `POST /commands`, then handle each
-`CommandResultDTO` (contract §4):
+Drain pending entries **FIFO** (`created_at` order), sending **one command per `POST /commands`
+request** and applying its result (below) before the next entry is read. This ordering is what makes
+the offline create-then-reference chain (§7.4) work: a create's reconciliation remaps a dependent
+command's local id **in the DB** before that dependent is transmitted, so the server never receives an
+un-reconciled local id. Each entry's current payload is re-read from the DB immediately before it is
+sent (so a prior reconcile's remap is picked up). Handle each `CommandResultDTO` (contract §4):
 
 - **`ok` + a server id in `result`** → run **reconciliation** (§7.4), mark the entry `sent`.
 - **`ok` with no id (replay of a cached result, or an idempotent no-id command)** → mark `sent`.
