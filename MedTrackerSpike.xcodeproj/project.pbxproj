@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 110;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -66,11 +66,7 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			name = MedTrackerSpike;
-			packageProductDependencies = (
-			);
 			productName = MedTrackerSpike;
 			productReference = 3711C0363D91D4A4CD54192D /* MedTrackerSpike.app */;
 			productType = "com.apple.product-type.application";
@@ -82,7 +78,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					5494235622A36B51877643DB = {
 						ProvisioningStyle = Automatic;
@@ -98,7 +94,7 @@
 			);
 			mainGroup = 3419FFA34DD43AAB5B150D77;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
+			preferredProjectObjectVersion = 110;
 			productRefGroup = F76FA3E633D82BDB39E404B5 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -111,7 +107,6 @@
 /* Begin PBXSourcesBuildPhase section */
 		4032EDB5F34154D59C531AC8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				B5957A5CE1D99893B1D84A16 /* AppDelegate.swift in Sources */,
 				5BCCF6C5468BA2EC29D0AFB1 /* MedTrackerSpikeApp.swift in Sources */,
@@ -120,15 +115,15 @@
 				0D44885EEC5405E39D486FA6 /* SpikeLog.swift in Sources */,
 				758F14FB1971F92F48412F3A /* SpikeView.swift in Sources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		14A819775CA0A56E9B635505 /* Debug */ = {
+		14A819775CA0A56E9B635505 /* Debug configuration for PBXProject "MedTrackerSpike" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -158,10 +153,14 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Developer ID Application: White Jamie (RVVRP4WY6B)";
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = RVVRP4WY6B;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -176,26 +175,30 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
-		8F2D527A717667EC368B806F /* Release */ = {
+		8F2D527A717667EC368B806F /* Release configuration for PBXNativeTarget "MedTrackerSpike" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Spike/MedTrackerSpike.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.medical";
@@ -213,10 +216,11 @@
 			};
 			name = Release;
 		};
-		B4052E2B564104FAB81C5A34 /* Release */ = {
+		B4052E2B564104FAB81C5A34 /* Release configuration for PBXProject "MedTrackerSpike" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -246,10 +250,14 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Developer ID Application: White Jamie (RVVRP4WY6B)";
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = RVVRP4WY6B;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -258,25 +266,29 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
-		F1DF6E2E82E4B9079FF761AD /* Debug */ = {
+		F1DF6E2E82E4B9079FF761AD /* Debug configuration for PBXNativeTarget "MedTrackerSpike" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Spike/MedTrackerSpike.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.medical";
@@ -300,19 +312,17 @@
 		FEA75D1CE59FF5ED2A9CF392 /* Build configuration list for PBXNativeTarget "MedTrackerSpike" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				F1DF6E2E82E4B9079FF761AD /* Debug */,
-				8F2D527A717667EC368B806F /* Release */,
+				F1DF6E2E82E4B9079FF761AD /* Debug configuration for PBXNativeTarget "MedTrackerSpike" */,
+				8F2D527A717667EC368B806F /* Release configuration for PBXNativeTarget "MedTrackerSpike" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
 		FFFA426BA15105DCCE8D648E /* Build configuration list for PBXProject "MedTrackerSpike" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				14A819775CA0A56E9B635505 /* Debug */,
-				B4052E2B564104FAB81C5A34 /* Release */,
+				14A819775CA0A56E9B635505 /* Debug configuration for PBXProject "MedTrackerSpike" */,
+				B4052E2B564104FAB81C5A34 /* Release configuration for PBXProject "MedTrackerSpike" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
