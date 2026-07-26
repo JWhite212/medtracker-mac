@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerCore
+import Testing
 
 // Transcribes `describe("buildSparklineShape", ...)` from
 // `tests/unit/sparkline.test.ts:4-49` verbatim, including the exact expected

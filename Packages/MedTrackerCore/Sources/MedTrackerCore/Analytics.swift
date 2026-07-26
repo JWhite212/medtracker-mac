@@ -59,7 +59,7 @@ public enum TrendDirection: Equatable, Hashable {
 /// percent change is `jsRound(abs((current-previous)/previous*100))` — `0`
 /// rounds to `.flat`, else direction follows the sign of `current-previous`.
 public func calculateTrend(current: Double, previous: Double) -> (direction: TrendDirection, percent: Int) {
-    if previous == 0 && current == 0 { return (.flat, 0) }
+    if previous == 0, current == 0 { return (.flat, 0) }
     if previous == 0 { return (.up, 100) }
 
     let change = (current - previous) / previous * 100
@@ -93,7 +93,7 @@ public func calculateStreak(dateStringsNewestFirst dates: [String], today: Strin
     guard dates[0] == today else { return 0 }
 
     var streak = 1
-    for i in 1..<dates.count {
+    for i in 1 ..< dates.count {
         guard
             let prev = parseDateStringAsUTCMidnight(dates[i - 1]),
             let curr = parseDateStringAsUTCMidnight(dates[i])

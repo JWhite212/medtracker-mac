@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerCore
+import Testing
 
 // Ports the `calculateStreak`, `calculateAdherence`/`calculateOveruse`
 // (→ `adherencePercent`/`overusePercent`), and `calculateTrend` describe

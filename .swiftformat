@@ -1,0 +1,36 @@
+# Minimal, conservative SwiftFormat config for MedTrackerCore.
+#
+# Goal: catch genuine whitespace/import-hygiene drift without rewriting the
+# TS-ported source. A handful of SwiftFormat's default-on rules would touch
+# large swaths of intentionally-styled or parity-sensitive code, so they're
+# turned off here rather than fought file-by-file:
+#
+# - wrapIfStatementBodies: would explode the single-line `if cond { ... }`
+#   style used consistently across the ported modules (Analytics, Time,
+#   Inventory, Reminders, Schedule) into multi-line form.
+# - numberFormatting: would add underscore grouping to numeric literals
+#   (timestamps, thresholds) across sources and tests — cosmetic churn with
+#   no readability win for this codebase's numeric literals.
+# - redundantRawValues: would strip explicit raw values from enum cases
+#   (e.g. `ScheduleKind`) that are deliberately spelled out together for
+#   TS wire-format parity, even where one happens to match Swift's implicit
+#   default.
+# - noForceUnwrapInTests / hoistTry: would rewrite test assertions from
+#   force-unwrap (`!`) to `try #require(...)`, which changes test function
+#   signatures (adds `throws`) — a structural rewrite, not a format fix.
+# - docComments: would convert plain `//` narrative comments (test-authorship
+#   notes, TS-source cross-references) into `///` doc comments, changing
+#   their semantics rather than just their formatting.
+# - conditionalAssignment: would collapse `let x: T; if cond { x = a } else
+#   { x = b }` blocks into Swift 5.9 `let x = if cond { a } else { b }`
+#   expression syntax — a real control-flow restructuring (Time.swift,
+#   Csv.swift), not a whitespace/formatting fix.
+# - blankLinesAroundMark: this codebase's `// MARK: - Title (...)` headers
+#   routinely wrap their description onto a second `//` line (a deliberate,
+#   pervasive style — see Schedule.swift, ScheduleTests.swift, TimeTests.swift,
+#   InventoryTests.swift). The rule assumes MARK comments are single-line and
+#   inserts a blank line immediately after the "MARK:" line, splitting the
+#   wrapped sentence in two rather than adding a blank line after the whole
+#   comment block.
+--swiftversion 5.9
+--disable wrapIfStatementBodies,numberFormatting,redundantRawValues,noForceUnwrapInTests,hoistTry,docComments,conditionalAssignment,blankLinesAroundMark

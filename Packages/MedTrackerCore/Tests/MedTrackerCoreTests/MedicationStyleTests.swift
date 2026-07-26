@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerCore
+import Testing
 
 // Transcribes the `getReadableTextColor` describe block from
 // `tests/unit/medication-style.test.ts` (dark-vs-light expectations only).

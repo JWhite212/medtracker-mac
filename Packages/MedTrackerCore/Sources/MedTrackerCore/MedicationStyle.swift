@@ -76,7 +76,7 @@ public func renderedColours(
 private func isASCIIHexDigit(_ c: Character) -> Bool {
     guard c.unicodeScalars.count == 1, let scalar = c.unicodeScalars.first else { return false }
     switch scalar.value {
-    case 0x30...0x39, 0x41...0x46, 0x61...0x66: // 0-9, A-F, a-f
+    case 0x30 ... 0x39, 0x41 ... 0x46, 0x61 ... 0x66: // 0-9, A-F, a-f
         return true
     default:
         return false
@@ -102,9 +102,9 @@ private func parseHexRGB(_ hex: String) -> (r: Double, g: Double, b: Double)? {
         return Double(byte)
     }
 
-    guard let r = componentValue(expanded[0..<2]),
-          let g = componentValue(expanded[2..<4]),
-          let b = componentValue(expanded[4..<6])
+    guard let r = componentValue(expanded[0 ..< 2]),
+          let g = componentValue(expanded[2 ..< 4]),
+          let b = componentValue(expanded[4 ..< 6])
     else { return nil }
 
     return (r, g, b)

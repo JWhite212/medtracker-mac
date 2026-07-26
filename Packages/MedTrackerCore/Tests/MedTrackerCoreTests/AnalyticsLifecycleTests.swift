@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import MedTrackerCore
+import Testing
 
 // Ports `tests/unit/analytics-lifecycle.test.ts` (all cases, verbatim).
 

@@ -22,3 +22,26 @@ import Foundation
 public func jsRound(_ x: Double) -> Int {
     Int((x + 0.5).rounded(.down))
 }
+
+// MARK: - JS-style number-to-string
+
+/// Renders a `Double` the way a JS template literal (`${x}`) would: whole
+/// values print with no trailing `.0` (`40` not `40.0`), matching
+/// `Number.prototype.toString()`. Non-whole values fall through to Swift's
+/// own `Double` description, which — like JS's `Number::toString` — is a
+/// shortest-round-trip decimal representation, so for any double value
+/// produced by identical IEEE 754 arithmetic the two already agree digit for
+/// digit (e.g. `0.1 + 0.2` prints `0.30000000000000004` in both).
+///
+/// Shared by `Insights.swift` (adherence percentages, trend deltas — used
+/// as-is with no additional rounding, to keep any floating-point artifact in
+/// exact parity with the TS source) and `Sparkline.swift` (path coordinates,
+/// always pre-rounded via `round1` before reaching here). Was previously
+/// duplicated file-scoped-`private` in both files; consolidated since the
+/// two implementations were byte-for-byte identical.
+func jsNumberString(_ x: Double) -> String {
+    if x.isFinite, x == x.rounded() {
+        return String(Int(x))
+    }
+    return String(x)
+}
