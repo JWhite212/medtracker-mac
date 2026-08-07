@@ -1,7 +1,7 @@
 import Foundation
 import MedTrackerCore
-import Testing
 @testable import MedTrackerUI
+import Testing
 
 /// Deterministic assertions for the pattern-fill *semantics* (§6).
 ///

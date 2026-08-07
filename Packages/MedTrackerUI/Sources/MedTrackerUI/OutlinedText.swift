@@ -1,5 +1,5 @@
-import SwiftUI
 import MedTrackerCore
+import SwiftUI
 
 /// A text label with a 1px outline in each of the four cardinal directions,
 /// used to keep medication labels legible over arbitrary user colours/patterns
@@ -19,7 +19,8 @@ public struct OutlinedText: View {
 
     /// Fill = the WCAG-picked candidate; outline = the opposite candidate.
     public static func forContrast(_ text: String, textColor: ReadableTextColor,
-                                   font: Font = .body.weight(.semibold)) -> OutlinedText {
+                                   font: Font = .body.weight(.semibold)) -> OutlinedText
+    {
         let opposite: ReadableTextColor = textColor == .dark ? .light : .dark
         return OutlinedText(text, fill: textColor.color, outline: opposite.color, font: font)
     }

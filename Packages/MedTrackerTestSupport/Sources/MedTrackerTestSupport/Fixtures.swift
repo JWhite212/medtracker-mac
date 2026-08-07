@@ -44,7 +44,8 @@ public enum Fixtures {
 
     /// Seed a canonical taken dose_log row for DB-backed tests.
     public static func sampleDoseLog(id: String = "d1", medicationId: String = "m1",
-                                     userId: String = "u1") -> DoseLog {
+                                     userId: String = "u1") -> DoseLog
+    {
         DoseLog(id: id, userId: userId, medicationId: medicationId,
                 takenAt: 0, loggedAt: 0, updatedAt: 0)
     }

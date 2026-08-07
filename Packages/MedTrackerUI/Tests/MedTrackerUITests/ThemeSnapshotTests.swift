@@ -1,6 +1,6 @@
+@testable import MedTrackerUI
 import SwiftUI
 import XCTest
-@testable import MedTrackerUI
 
 final class ThemeSnapshotTests: XCTestCase {
     @MainActor

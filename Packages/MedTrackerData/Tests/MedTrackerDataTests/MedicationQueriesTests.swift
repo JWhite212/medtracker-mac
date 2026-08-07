@@ -19,7 +19,7 @@ struct MedicationQueriesTests {
             try med("b", sortOrder: 2).insert(d)
             try med("a", sortOrder: 1).insert(d)
             try med("z", sortOrder: 0, archived: true).insert(d)
-            try med("other", sortOrder: 0, user: "u2").insert(d)  // different owner
+            try med("other", sortOrder: 0, user: "u2").insert(d) // different owner
         }
         let active = try db.read { try Medication.fetchActive($0, userId: "u1") }
         try #expect(active.map(\.id) == ["a", "b"])
@@ -57,6 +57,6 @@ struct MedicationQueriesTests {
                                eventType: "refill", quantityChange: 10, createdAt: epoch).insert(d)
         }
         let hist = try db.read { try InventoryEvent.history($0, userId: "u1", medicationId: "m1") }
-        try #expect(hist.map(\.id) == ["e2", "e1"])   // newest first
+        try #expect(hist.map(\.id) == ["e2", "e1"]) // newest first
     }
 }

@@ -1,13 +1,13 @@
 import Foundation
 import GRDB
+@testable import MedTrackerApp
 import MedTrackerData
 import MedTrackerSync
 import MedTrackerTestSupport
 import Testing
-@testable import MedTrackerApp
 
 @MainActor
-@Test func testingEnvComposesInMemoryDoublesIntoASyncEngine() throws {
+@Test func ingEnvComposesInMemoryDoublesIntoASyncEngine() throws {
     let env = try AppEnvironment.testing(transport: MockTransport())
 
     // token store starts empty (no session persisted yet)
@@ -31,7 +31,7 @@ import Testing
 }
 
 @MainActor
-@Test func testingEnvAcceptsAnInjectedTokenStore() throws {
+@Test func ingEnvAcceptsAnInjectedTokenStore() throws {
     let tok = InMemoryTokenStore()
     try tok.save(StoredSession(token: "t", userId: "u1"))
     let env = try AppEnvironment.testing(transport: MockTransport(), tokenStore: tok)

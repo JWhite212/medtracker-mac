@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 import MedTrackerTestSupport
+import Testing
 
 @Test func mockTransportScriptsAndRecordsRequests() async throws {
     let transport = MockTransport()
@@ -14,7 +14,7 @@ import MedTrackerTestSupport
 }
 
 @Test func fixedClockReturnsPinnedReferenceInstant() {
-    #expect(FixedClock.reference.epoch == 1_785_060_000)          // 2026-07-26T10:00:00Z
+    #expect(FixedClock.reference.epoch == 1_785_060_000) // 2026-07-26T10:00:00Z
     #expect(FixedClock(epoch: 0).now == Date(timeIntervalSince1970: 0))
 }
 

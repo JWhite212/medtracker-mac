@@ -252,7 +252,17 @@ private func schedulePayload(_ s: MedicationScheduleInput) -> JSONValue {
 
         try await dbWriter.write { [userId, outbox, payload] db in
             guard var med = try fetchOwnedMedication(db, userId: userId, id: medicationId) else { return }
-            guard med.inventoryCount != newCount else { throw WriteError.invalidAdjustment }
+            // Reject the no-op exactly as the server does (InventoryRepository —
+            // the 1:1 port of the backend's inventory-events.ts — computes
+            // `newCount - (previousCount ?? 0)` and rejects a zero change).
+            // Comparing `Int?` to `Int` instead would let an untracked medication
+            // (`inventoryCount == nil`) adjust to 0 locally while the server
+            // rejects the command: the outbox row parks as `failed`, the server's
+            // `updated_at` never advances, so no delta pull ever heals the wrong
+            // local count.
+            guard newCount - (med.inventoryCount ?? 0) != 0 else {
+                throw WriteError.invalidAdjustment
+            }
             med.inventoryCount = newCount
             med.updatedAt = nowEpoch
             try med.update(db)

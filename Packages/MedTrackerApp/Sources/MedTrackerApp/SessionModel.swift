@@ -85,9 +85,9 @@ public final class SessionModel {
             let outcome = try await env.syncEngine.login(email: email, password: password)
             switch outcome {
             case .session:
-                phase = .firstSync(FirstSyncState())            // engine persisted the session
+                phase = .firstSync(FirstSyncState()) // engine persisted the session
             case let .totpChallenge(preAuthToken):
-                phase = .totpChallenge(preAuthToken: preAuthToken, error: nil)   // nothing persisted yet
+                phase = .totpChallenge(preAuthToken: preAuthToken, error: nil) // nothing persisted yet
             }
         } catch {
             phase = .unauthenticated(error: authError(for: error, context: .login))
@@ -101,7 +101,7 @@ public final class SessionModel {
             phase = .firstSync(FirstSyncState())
         } catch {
             phase = .totpChallenge(preAuthToken: preAuthToken,
-                                   error: authError(for: error, context: .totp))   // token retained
+                                   error: authError(for: error, context: .totp)) // token retained
         }
     }
 
@@ -126,7 +126,7 @@ public final class SessionModel {
         defer { isSyncing = false }
         do {
             let outcome = try await env.syncEngine.sync()
-            _ = outcome   // 1c reveals the shell on completion; pulled counts feed the progress UI
+            _ = outcome // 1c reveals the shell on completion; pulled counts feed the progress UI
             lastSyncedAt = Date()
             lastSyncError = nil
             if case .firstSync = phase {
@@ -140,7 +140,7 @@ public final class SessionModel {
             let mapped = authError(for: error, context: .login)
             lastSyncError = mapped
             if case .firstSync = phase {
-                phase = .authenticated           // enter with whatever local data exists + a banner
+                phase = .authenticated // enter with whatever local data exists + a banner
             }
         }
     }
@@ -163,7 +163,7 @@ public final class SessionModel {
         case APIError.transport:
             return .transport
         default:
-            return .server   // .server(status:) / .decoding / anything unexpected
+            return .server // .server(status:) / .decoding / anything unexpected
         }
     }
 }

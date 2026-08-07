@@ -1,7 +1,7 @@
+import MedTrackerCore
+@testable import MedTrackerUI
 import SwiftUI
 import XCTest
-@testable import MedTrackerUI
-import MedTrackerCore
 
 final class MedicationPatternFillSnapshotTests: XCTestCase {
     private let primary = "#6366f1"

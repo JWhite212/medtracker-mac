@@ -54,7 +54,8 @@ public struct HistoryFilter: Sendable, Equatable, Hashable {
     public init(medicationId: String? = nil, status: String? = nil,
                 fromEpoch: Double? = nil, toEpoch: Double? = nil,
                 notesQuery: String? = nil, sideEffectName: String? = nil,
-                sideEffectSeverity: String? = nil) {
+                sideEffectSeverity: String? = nil)
+    {
         self.medicationId = medicationId
         self.status = status
         self.fromEpoch = fromEpoch
@@ -76,39 +77,40 @@ public enum DoseLogQueries {
     /// system SQLite on macOS 15 ships it; if a build lacks it, degrade the side-effect
     /// predicates to `d.side_effects LIKE '%'||:x||'%'`.
     public static func page(_ db: Database, userId: String, tz: String,
-                            filter: HistoryFilter, limit: Int) throws -> [HistoryRow] {
+                            filter: HistoryFilter, limit: Int) throws -> [HistoryRow]
+    {
         try HistoryRow.fetchAll(db, sql: """
-            SELECT d.id AS dose_id, d.medication_id AS medication_id,
-                   m.name AS medication_name, m.dosage_amount AS dosage_amount,
-                   m.dosage_unit AS dosage_unit, m.colour AS colour,
-                   m.colour_secondary AS colour_secondary, m.pattern AS pattern,
-                   d.quantity AS quantity, d.taken_at AS taken_at, d.status AS status,
-                   d.notes AS notes, d.side_effects AS side_effects,
-                   localDate(d.taken_at, :tz) AS local_day
-            FROM dose_log d
-            JOIN medication m ON m.id = d.medication_id
-            WHERE d.user_id = :userId
-              AND (:medicationId IS NULL OR d.medication_id = :medicationId)
-              AND (:status IS NULL OR d.status = :status)
-              AND (:fromEpoch IS NULL OR d.taken_at >= :fromEpoch)
-              AND (:toEpoch IS NULL OR d.taken_at < :toEpoch)
-              AND (:notesQuery IS NULL OR d.notes LIKE '%' || :notesQuery || '%')
-              AND (:sideEffectName IS NULL OR EXISTS (
-                     SELECT 1 FROM json_each(d.side_effects)
-                     WHERE json_extract(json_each.value, '$.name') = :sideEffectName))
-              AND (:sideEffectSeverity IS NULL OR EXISTS (
-                     SELECT 1 FROM json_each(d.side_effects)
-                     WHERE json_extract(json_each.value, '$.severity') = :sideEffectSeverity))
-            ORDER BY d.taken_at DESC
-            LIMIT :limit
-            """, arguments: ["tz": tz, "userId": userId,
-                             "medicationId": filter.medicationId,
-                             "status": filter.status,
-                             "fromEpoch": filter.fromEpoch,
-                             "toEpoch": filter.toEpoch,
-                             "notesQuery": filter.notesQuery,
-                             "sideEffectName": filter.sideEffectName,
-                             "sideEffectSeverity": filter.sideEffectSeverity,
-                             "limit": limit])
+        SELECT d.id AS dose_id, d.medication_id AS medication_id,
+               m.name AS medication_name, m.dosage_amount AS dosage_amount,
+               m.dosage_unit AS dosage_unit, m.colour AS colour,
+               m.colour_secondary AS colour_secondary, m.pattern AS pattern,
+               d.quantity AS quantity, d.taken_at AS taken_at, d.status AS status,
+               d.notes AS notes, d.side_effects AS side_effects,
+               localDate(d.taken_at, :tz) AS local_day
+        FROM dose_log d
+        JOIN medication m ON m.id = d.medication_id
+        WHERE d.user_id = :userId
+          AND (:medicationId IS NULL OR d.medication_id = :medicationId)
+          AND (:status IS NULL OR d.status = :status)
+          AND (:fromEpoch IS NULL OR d.taken_at >= :fromEpoch)
+          AND (:toEpoch IS NULL OR d.taken_at < :toEpoch)
+          AND (:notesQuery IS NULL OR d.notes LIKE '%' || :notesQuery || '%')
+          AND (:sideEffectName IS NULL OR EXISTS (
+                 SELECT 1 FROM json_each(d.side_effects)
+                 WHERE json_extract(json_each.value, '$.name') = :sideEffectName))
+          AND (:sideEffectSeverity IS NULL OR EXISTS (
+                 SELECT 1 FROM json_each(d.side_effects)
+                 WHERE json_extract(json_each.value, '$.severity') = :sideEffectSeverity))
+        ORDER BY d.taken_at DESC
+        LIMIT :limit
+        """, arguments: ["tz": tz, "userId": userId,
+                         "medicationId": filter.medicationId,
+                         "status": filter.status,
+                         "fromEpoch": filter.fromEpoch,
+                         "toEpoch": filter.toEpoch,
+                         "notesQuery": filter.notesQuery,
+                         "sideEffectName": filter.sideEffectName,
+                         "sideEffectSeverity": filter.sideEffectSeverity,
+                         "limit": limit])
     }
 }

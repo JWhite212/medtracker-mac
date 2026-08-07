@@ -1,7 +1,7 @@
+import MedTrackerCore
+@testable import MedTrackerUI
 import SwiftUI
 import Testing
-@testable import MedTrackerUI
-import MedTrackerCore
 
 @Test func hexInitParsesSixDigit() {
     let c = Color(hex: "#10b981")
