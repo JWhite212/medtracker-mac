@@ -1,8 +1,8 @@
 import Foundation
+@testable import MedTrackerApp
 import MedTrackerCore
 import MedTrackerData
 import Testing
-@testable import MedTrackerApp
 
 // MARK: doseStatus (pure String → enum, with the "everything else is taken" fallback)
 
@@ -10,7 +10,7 @@ import Testing
     #expect(RecordAdapters.doseStatus("taken") == .taken)
     #expect(RecordAdapters.doseStatus("skipped") == .skipped)
     #expect(RecordAdapters.doseStatus("missed") == .missed)
-    #expect(RecordAdapters.doseStatus("garbage") == .taken)   // unknown → .taken (§4.1 fallback)
+    #expect(RecordAdapters.doseStatus("garbage") == .taken) // unknown → .taken (§4.1 fallback)
     #expect(RecordAdapters.doseStatus("") == .taken)
 }
 
@@ -34,7 +34,7 @@ import Testing
     let row = RecordAdapters.scheduleRow(s)
     #expect(row.kind == .fixedTime)
     #expect(row.timeOfDay == "08:00")
-    #expect(row.daysOfWeek == [1, 3, 5])   // via MedicationSchedule.daysOfWeekArray
+    #expect(row.daysOfWeek == [1, 3, 5]) // via MedicationSchedule.daysOfWeekArray
     #expect(row.intervalHours == nil)
 }
 
@@ -42,7 +42,7 @@ import Testing
     let s = MedicationSchedule(id: "s3", medicationId: "m1", userId: "u1", scheduleKind: "weird",
                                timeOfDay: nil, intervalHours: nil, daysOfWeek: nil,
                                sortOrder: 0, effectiveFrom: 0, createdAt: 0)
-    #expect(RecordAdapters.scheduleRow(s).kind == .prn)   // rawValue? ?? .prn
+    #expect(RecordAdapters.scheduleRow(s).kind == .prn) // rawValue? ?? .prn
 }
 
 // MARK: doseEvent (epoch Double → Date, status via doseStatus)
@@ -68,5 +68,5 @@ import Testing
     }
     #expect(RecordAdapters.pattern(med("checkerboard")) == .checkerboard)
     #expect(RecordAdapters.pattern(med("h-stripes")) == .hStripes)
-    #expect(RecordAdapters.pattern(med("not-a-pattern")) == .solid)   // rawValue? ?? .solid
+    #expect(RecordAdapters.pattern(med("not-a-pattern")) == .solid) // rawValue? ?? .solid
 }

@@ -1,17 +1,17 @@
-import SwiftUI
 import MedTrackerCore
+import SwiftUI
 
 /// Dark-only design tokens (master §10.2, spec §6). Fixed sRGB hex; the App
 /// target's Assets.xcassets mirrors these exact values (Task 25).
 public enum Theme {
-    public static let surface       = Color(hex: "#0a0a0f")
-    public static let raised        = Color(hex: "#12121a")
-    public static let textPrimary   = Color(hex: "#f0f0f5")
+    public static let surface = Color(hex: "#0a0a0f")
+    public static let raised = Color(hex: "#12121a")
+    public static let textPrimary = Color(hex: "#f0f0f5")
     public static let textSecondary = Color(hex: "#8888a0")
-    public static let success       = Color(hex: "#10b981")
-    public static let warning       = Color(hex: "#f59e0b")
-    public static let danger        = Color(hex: "#ef4444")
-    public static let accent        = Color(hex: "#6366f1")   // fixed in 1c; preset picker is Phase 2
+    public static let success = Color(hex: "#10b981")
+    public static let warning = Color(hex: "#f59e0b")
+    public static let danger = Color(hex: "#ef4444")
+    public static let accent = Color(hex: "#6366f1") // fixed in 1c; preset picker is Phase 2
 
     public enum Spacing {
         public static let xs: CGFloat = 4
@@ -20,6 +20,7 @@ public enum Theme {
         public static let lg: CGFloat = 16
         public static let xl: CGFloat = 24
     }
+
     public enum Radius {
         public static let card: CGFloat = 14
         public static let pill: CGFloat = 8
@@ -50,7 +51,9 @@ public extension Color {
 
 public extension ReadableTextColor {
     /// The concrete SwiftUI colour for the WCAG-picked foreground candidate.
-    var color: Color { Color(hex: hex) }
+    var color: Color {
+        Color(hex: hex)
+    }
 }
 
 // MARK: - Reduce motion

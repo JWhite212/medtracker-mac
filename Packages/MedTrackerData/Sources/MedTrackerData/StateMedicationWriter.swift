@@ -17,7 +17,8 @@ public enum StateMedicationWriter {
     /// `fixed_time` with a non-empty array (empty `[]` → `nil`). Stray fields on
     /// the wrong kind are dropped here rather than tripping the `CHECK`.
     public static func makeSchedule(medicationId: String, userId: String,
-                                    input: MedicationScheduleInput, createdAt: Double) -> MedicationSchedule {
+                                    input: MedicationScheduleInput, createdAt: Double) -> MedicationSchedule
+    {
         let isFixedTime = input.scheduleKind == "fixed_time"
         let isInterval = input.scheduleKind == "interval"
 
@@ -52,7 +53,8 @@ public enum StateMedicationWriter {
     @discardableResult
     public static func upsert(_ db: Database, userId: String, id: String, isCreate: Bool,
                               fields: MedicationFields, schedules: [MedicationScheduleInput],
-                              now: Date) throws -> Medication? {
+                              now: Date) throws -> Medication?
+    {
         let nowEpoch = now.timeIntervalSince1970
 
         if isCreate {
@@ -65,7 +67,8 @@ public enum StateMedicationWriter {
                 scheduleIntervalHours: fields.scheduleIntervalHours,
                 inventoryCount: fields.inventoryCount,
                 inventoryAlertThreshold: fields.inventoryAlertThreshold,
-                startedAt: nowEpoch, createdAt: nowEpoch, updatedAt: nowEpoch)
+                startedAt: nowEpoch, createdAt: nowEpoch, updatedAt: nowEpoch
+            )
             try med.insert(db)
             for input in schedules {
                 try makeSchedule(medicationId: id, userId: userId, input: input, createdAt: nowEpoch).insert(db)

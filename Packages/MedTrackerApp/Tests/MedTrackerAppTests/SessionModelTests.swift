@@ -1,12 +1,13 @@
 import Foundation
+@testable import MedTrackerApp
 import MedTrackerSync
 import MedTrackerTestSupport
 import Testing
-@testable import MedTrackerApp
 
 @MainActor
 private func makeModel(_ transport: MockTransport,
-                       acknowledged: Bool = true) throws -> (SessionModel, AppEnvironment, UserDefaults) {
+                       acknowledged: Bool = true) throws -> (SessionModel, AppEnvironment, UserDefaults)
+{
     let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
     defaults.set(acknowledged, forKey: "disclaimerAcknowledged")
     let env = try AppEnvironment.testing(transport: transport)
@@ -27,8 +28,8 @@ private func makeModel(_ transport: MockTransport,
     let (model, _, defaults) = try makeModel(MockTransport(), acknowledged: false)
     await model.start()
     model.acknowledgeDisclaimer()
-    #expect(defaults.bool(forKey: "disclaimerAcknowledged") == true)   // persisted
-    #expect(model.phase == .unauthenticated(error: nil))               // no token → login
+    #expect(defaults.bool(forKey: "disclaimerAcknowledged") == true) // persisted
+    #expect(model.phase == .unauthenticated(error: nil)) // no token → login
 }
 
 @MainActor
@@ -79,8 +80,8 @@ private func makeModel(_ transport: MockTransport,
 @MainActor
 @Test func verifyWrongCodeStaysOnChallengeWithError() async throws {
     let t = MockTransport()
-    t.enqueue(status: 200, json: Fixtures.loginTotp)                        // reach the challenge
-    t.enqueue(status: 401, json: #"{"message":"Incorrect code"}"#)         // verify fails
+    t.enqueue(status: 200, json: Fixtures.loginTotp) // reach the challenge
+    t.enqueue(status: 401, json: #"{"message":"Incorrect code"}"#) // verify fails
     let (model, _, _) = try makeModel(t)
     await model.signIn(email: "a@b.com", password: "pw")
     await model.verify(code: "000000")
@@ -90,15 +91,15 @@ private func makeModel(_ transport: MockTransport,
 @MainActor
 @Test func verifyCorrectCodeEntersFirstSync() async throws {
     let t = MockTransport()
-    t.enqueue(status: 200, json: Fixtures.loginTotp)      // reach the challenge
-    t.enqueue(status: 200, json: Fixtures.loginSession)   // /auth/2fa success — {token, user} shape
+    t.enqueue(status: 200, json: Fixtures.loginTotp) // reach the challenge
+    t.enqueue(status: 200, json: Fixtures.loginSession) // /auth/2fa success — {token, user} shape
     let (model, env, _) = try makeModel(t)
     await model.signIn(email: "a@b.com", password: "pw")
     #expect(model.phase == .totpChallenge(preAuthToken: "pre_xyz", error: nil))
     await model.verify(code: "000000")
     #expect(model.phase == .firstSync(FirstSyncState(pulledMedications: 0, pulledDoseLogs: 0,
                                                      isIndeterminate: true)))
-    try #expect(env.tokenStore.load()?.token == "sess_abc")   // session now persisted
+    try #expect(env.tokenStore.load()?.token == "sess_abc") // session now persisted
 }
 
 // MARK: runSync funnel (§3.3)
@@ -106,10 +107,10 @@ private func makeModel(_ transport: MockTransport,
 @MainActor
 @Test func runSyncFromFirstSyncBecomesAuthenticated() async throws {
     let t = MockTransport()
-    t.enqueue(status: 200, json: Fixtures.loginSession)   // persists a session via SyncEngine
-    t.enqueue(status: 200, json: Fixtures.syncDelta)      // the first sync pull
+    t.enqueue(status: 200, json: Fixtures.loginSession) // persists a session via SyncEngine
+    t.enqueue(status: 200, json: Fixtures.syncDelta) // the first sync pull
     let (model, _, _) = try makeModel(t)
-    await model.signIn(email: "a@b.com", password: "pw")  // → .firstSync
+    await model.signIn(email: "a@b.com", password: "pw") // → .firstSync
     await model.runSync()
     #expect(model.phase == .authenticated)
 }
@@ -118,28 +119,28 @@ private func makeModel(_ transport: MockTransport,
 @Test func runSync401ClearsSessionAndDropsToReLogin() async throws {
     let t = MockTransport()
     t.enqueue(status: 200, json: Fixtures.loginSession)
-    t.enqueue(status: 401, json: #"{"message":"Unauthorized"}"#)   // stale session on sync
+    t.enqueue(status: 401, json: #"{"message":"Unauthorized"}"#) // stale session on sync
     let (model, env, _) = try makeModel(t)
     await model.signIn(email: "a@b.com", password: "pw")
     await model.runSync()
     #expect(model.phase == .unauthenticated(error: .sessionExpired))
-    try #expect(env.tokenStore.load() == nil)                       // the ONLY place that clears
+    try #expect(env.tokenStore.load() == nil) // the ONLY place that clears
 }
 
 @MainActor
 @Test func runSyncTransportFailureKeepsSessionAuthenticated() async throws {
     let t = MockTransport()
     t.enqueue(status: 200, json: Fixtures.loginSession)
-    t.enqueue(status: 200, json: Fixtures.syncDelta)   // first sync → authenticated
+    t.enqueue(status: 200, json: Fixtures.syncDelta) // first sync → authenticated
     let (model, env, _) = try makeModel(t)
     await model.signIn(email: "a@b.com", password: "pw")
     await model.runSync()
     #expect(model.phase == .authenticated)
 
-    t.enqueue(status: 503, json: "upstream down")      // a later refresh fails non-401
+    t.enqueue(status: 503, json: "upstream down") // a later refresh fails non-401
     await model.runSync()
-    #expect(model.phase == .authenticated)             // dead network never looks like logout
-    try #expect(env.tokenStore.load() != nil)          // session untouched
+    #expect(model.phase == .authenticated) // dead network never looks like logout
+    try #expect(env.tokenStore.load() != nil) // session untouched
 }
 
 // MARK: SIWA (§3.2)

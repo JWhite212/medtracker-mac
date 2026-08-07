@@ -11,7 +11,8 @@ import Foundation
     private var isRunning = false
 
     public init(debounce: Duration = .milliseconds(500),
-                runSync: @escaping @Sendable () async -> Void) {
+                runSync: @escaping @Sendable () async -> Void)
+    {
         self.debounce = debounce
         self.runSync = runSync
     }
@@ -30,7 +31,7 @@ import Foundation
     }
 
     private func fire() async {
-        guard !isRunning else { return }   // drop-if-in-flight
+        guard !isRunning else { return } // drop-if-in-flight
         isRunning = true
         defer { isRunning = false }
         await runSync()

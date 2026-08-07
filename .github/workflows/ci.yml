@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   test:
-    name: swift test (core + data) + format lint
+    name: swift test (all packages) + format lint
     runs-on: macos-15
     steps:
       - name: Checkout
@@ -41,6 +41,9 @@ jobs:
             Packages/MedTrackerCore/.build
             Packages/MedTrackerData/.build
             Packages/MedTrackerSync/.build
+            Packages/MedTrackerApp/.build
+            Packages/MedTrackerUI/.build
+            Packages/MedTrackerTestSupport/.build
           key: swiftpm-${{ runner.os }}-${{ hashFiles('Packages/**/Package.swift', 'Packages/**/Package.resolved') }}
           restore-keys: |
             swiftpm-${{ runner.os }}-
@@ -55,6 +58,24 @@ jobs:
 
       - name: Test MedTrackerSync
         working-directory: Packages/MedTrackerSync
+        run: swift test
+
+      - name: Test MedTrackerTestSupport
+        working-directory: Packages/MedTrackerTestSupport
+        run: swift test
+
+      - name: Test MedTrackerApp
+        working-directory: Packages/MedTrackerApp
+        run: swift test
+
+      # MedTrackerUI's snapshot tests run in their DEFAULT render-smoke mode here:
+      # they assert each view lays out and rasterises to a non-blank image, which is
+      # deterministic on any runner. Byte-equal pixel comparison is deliberately NOT
+      # gated in CI — reference images drift across macOS/Xcode releases (see
+      # Tests/MedTrackerUITests/SnapshotSupport.swift). Run `SNAPSHOT_PIXEL=1 swift test`
+      # locally for visual-regression checks.
+      - name: Test MedTrackerUI
+        working-directory: Packages/MedTrackerUI
         run: swift test
 
       - name: Install SwiftFormat

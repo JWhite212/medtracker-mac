@@ -1,5 +1,5 @@
-import SwiftUI
 import MedTrackerCore
+import SwiftUI
 
 /// SwiftUI port of the web's per-pattern `background-image` geometry
 /// (`getMedicationBackground`), with the `<20pt → gradient` degradation (§6).
@@ -16,17 +16,25 @@ public struct MedicationPatternFill: View {
     }
 
     private let pattern: MedicationPattern
-    private let colours: [Color]   // 1 or 2 entries, per renderedColours
+    private let colours: [Color] // 1 or 2 entries, per renderedColours
 
     public init(colour: String, colourSecondary: String?, pattern: MedicationPattern) {
         self.pattern = pattern
-        self.colours = renderedColours(colour: colour, colourSecondary: colourSecondary, pattern: pattern)
+        colours = renderedColours(colour: colour, colourSecondary: colourSecondary, pattern: pattern)
             .map(Color.init(hex:))
     }
 
-    private var primary: Color { colours[0] }
-    private var secondary: Color { colours.count > 1 ? colours[1] : colours[0] }
-    private var overlay: Color { colours.count > 1 ? secondary : Color.white.opacity(0.28) }
+    private var primary: Color {
+        colours[0]
+    }
+
+    private var secondary: Color {
+        colours.count > 1 ? colours[1] : colours[0]
+    }
+
+    private var overlay: Color {
+        colours.count > 1 ? secondary : Color.white.opacity(0.28)
+    }
 
     public var body: some View {
         GeometryReader { geo in

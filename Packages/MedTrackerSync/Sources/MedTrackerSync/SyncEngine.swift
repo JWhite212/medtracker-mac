@@ -100,7 +100,7 @@ public actor SyncEngine {
     /// (an actor-isolated `async` method could not be — the write closure cannot
     /// `await`). Reads only the immutable, Sendable `outbox`, so this is concurrency-safe.
     @discardableResult
-    nonisolated public func enqueue(
+    public nonisolated func enqueue(
         _ db: Database, type: String, payload: JSONValue,
         localEntityId: String? = nil, localEntityKind: EntityKind? = nil
     ) throws -> OutboxEntry {

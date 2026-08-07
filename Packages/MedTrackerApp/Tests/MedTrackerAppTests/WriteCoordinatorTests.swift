@@ -220,3 +220,31 @@ private func payloadJSON(_ e: OutboxEntry) throws -> JSONValue {
         #expect(s.localEntityId == nil)
     } // reorder never reconciles
 }
+
+/// Regression: an untracked medication (`inventoryCount == nil`) adjusted to 0 is
+/// a no-op the SERVER rejects (`newCount - (previousCount ?? 0) == 0`). Comparing
+/// `Int?` to `Int` let it through locally, parking a failed outbox row and a wrong
+/// count that no delta pull could heal.
+@MainActor @Test func adjustInventoryToZeroOnUntrackedMedicationIsRejected() async throws {
+    let (db, coord) = try fixture()
+    try seedMed(db, inventory: nil)
+
+    await #expect(throws: WriteError.invalidAdjustment) {
+        try await coord.adjustInventory(medicationId: "m1", newCount: 0, note: nil)
+    }
+
+    try await db.read { try #expect(Medication.fetchOne($0, key: "m1")?.inventoryCount == nil) }
+    #expect(try outboxRows(db, type: "adjust_inventory").isEmpty)
+}
+
+/// The mirror case must still work: seeding an untracked medication to a real
+/// count is a genuine change, not a no-op.
+@MainActor @Test func adjustInventorySeedsUntrackedMedicationToNonZero() async throws {
+    let (db, coord) = try fixture()
+    try seedMed(db, inventory: nil)
+
+    try await coord.adjustInventory(medicationId: "m1", newCount: 20, note: nil)
+
+    try await db.read { try #expect(Medication.fetchOne($0, key: "m1")?.inventoryCount == 20) }
+    #expect(try outboxRows(db, type: "adjust_inventory").count == 1)
+}

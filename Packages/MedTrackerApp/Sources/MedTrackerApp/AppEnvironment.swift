@@ -29,7 +29,8 @@ public final class AppEnvironment {
     /// Hermetic wiring for `swift test`: in-memory GRDB, an injectable transport + token store,
     /// no network, no Keychain. Same `.production` config so URL-building parity is preserved.
     public static func testing(transport: HTTPTransport,
-                               tokenStore: any TokenStore = InMemoryTokenStore()) throws -> AppEnvironment {
+                               tokenStore: any TokenStore = InMemoryTokenStore()) throws -> AppEnvironment
+    {
         let dbWriter = try MedTrackerDatabase.open(path: nil)
         let engine = SyncEngine(config: .production, dbWriter: dbWriter,
                                 tokenStore: tokenStore, transport: transport)

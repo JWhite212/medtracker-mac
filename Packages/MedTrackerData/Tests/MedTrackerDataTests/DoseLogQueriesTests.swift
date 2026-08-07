@@ -32,8 +32,8 @@ struct DoseLogQueriesTests {
         let rows = try db.read {
             try DoseLogQueries.page($0, userId: "u1", tz: "UTC", filter: HistoryFilter(), limit: 20)
         }
-        try #expect(rows.map(\.doseId) == ["arch", "new", "old"])   // taken_at DESC
-        try #expect(rows.first?.medicationName == "Aspirin")        // archived med joined
+        try #expect(rows.map(\.doseId) == ["arch", "new", "old"]) // taken_at DESC
+        try #expect(rows.first?.medicationName == "Aspirin") // archived med joined
         try #expect(rows.last?.localDay == "2023-11-14")
     }
 

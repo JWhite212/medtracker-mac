@@ -59,8 +59,11 @@ import Observation
         "injection", "inhaler", "drops", "cream", "other",
     ]
     private static let categories: Set<String> = ["prescription", "otc", "supplement"]
-    private static let dosageRE = try! NSRegularExpression(pattern: "^\\d+(\\.\\d+)?$")
-    private static let timeRE = try! NSRegularExpression(pattern: "^([01]\\d|2[0-3]):[0-5]\\d$")
+    // Held as patterns rather than compiled `NSRegularExpression`s so validation
+    // needs no force-try: `range(of:options:.regularExpression)` is non-throwing
+    // and these anchored patterns match the same inputs.
+    private static let dosageRE = "^\\d+(\\.\\d+)?$"
+    private static let timeRE = "^([01]\\d|2[0-3]):[0-5]\\d$"
 
     public init(mode: Mode) {
         self.mode = mode
@@ -111,8 +114,8 @@ import Observation
     /// the backstop; messages here are placeholder copy (§8-#12).
     public func validate() -> [String] {
         var errors: [String] = []
-        func matches(_ re: NSRegularExpression, _ s: String) -> Bool {
-            re.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)) != nil
+        func matches(_ pattern: String, _ s: String) -> Bool {
+            s.range(of: pattern, options: .regularExpression) != nil
         }
 
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)

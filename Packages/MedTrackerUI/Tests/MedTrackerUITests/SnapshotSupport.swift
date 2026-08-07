@@ -1,8 +1,8 @@
 import AppKit
+@testable import MedTrackerUI
 import SnapshotTesting
 import SwiftUI
 import XCTest
-@testable import MedTrackerUI
 
 /// Deterministic dark-only host wrapper for every MedTrackerUI snapshot (§7.2):
 /// forced `.darkAqua` appearance + `\.colorScheme == .dark`, a fixed pixel frame,

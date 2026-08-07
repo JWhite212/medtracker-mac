@@ -41,46 +41,48 @@ public enum DoseAggregations {
     /// Date bounds are a sargable half-open UTC-epoch interval on `taken_at`
     /// (never `localDate()` on the column), so the composite indexes apply.
     public static func dailyTakenQuantity(_ db: Database, userId: String, tz: String,
-                                          fromEpoch: Double, toEpoch: Double) throws -> [DailyDoseCount] {
+                                          fromEpoch: Double, toEpoch: Double) throws -> [DailyDoseCount]
+    {
         try DailyDoseCount.fetchAll(db, sql: """
-            SELECT medication_id,
-                   localDate(taken_at, :tz) AS local_day,
-                   SUM(quantity) AS total_quantity
-            FROM dose_log
-            WHERE user_id = :userId AND status = 'taken'
-              AND taken_at >= :fromEpoch AND taken_at < :toEpoch
-            GROUP BY medication_id, local_day
-            ORDER BY local_day
-            """, arguments: ["tz": tz, "userId": userId,
-                             "fromEpoch": fromEpoch, "toEpoch": toEpoch])
+        SELECT medication_id,
+               localDate(taken_at, :tz) AS local_day,
+               SUM(quantity) AS total_quantity
+        FROM dose_log
+        WHERE user_id = :userId AND status = 'taken'
+          AND taken_at >= :fromEpoch AND taken_at < :toEpoch
+        GROUP BY medication_id, local_day
+        ORDER BY local_day
+        """, arguments: ["tz": tz, "userId": userId,
+                         "fromEpoch": fromEpoch, "toEpoch": toEpoch])
     }
 
     /// 7-day taken count + 30-day taken quantity (windowed via conditional
     /// aggregation) + unbounded `MAX(taken_at)` per med, in one scan.
     public static func perMedStats(_ db: Database, userId: String, now: Double) throws -> [PerMedStat] {
         try PerMedStat.fetchAll(db, sql: """
-            SELECT medication_id,
-                   COUNT(CASE WHEN taken_at >= :sevenDayStart THEN 1 END) AS taken7_count,
-                   MAX(taken_at) AS last_taken_at,
-                   COALESCE(SUM(CASE WHEN taken_at >= :thirtyDayStart THEN quantity ELSE 0 END), 0)
-                     AS thirty_day_quantity
-            FROM dose_log
-            WHERE user_id = :userId AND status = 'taken'
-            GROUP BY medication_id
-            """, arguments: ["userId": userId,
-                             "sevenDayStart": now - 7 * day,
-                             "thirtyDayStart": now - 30 * day])
+        SELECT medication_id,
+               COUNT(CASE WHEN taken_at >= :sevenDayStart THEN 1 END) AS taken7_count,
+               MAX(taken_at) AS last_taken_at,
+               COALESCE(SUM(CASE WHEN taken_at >= :thirtyDayStart THEN quantity ELSE 0 END), 0)
+                 AS thirty_day_quantity
+        FROM dose_log
+        WHERE user_id = :userId AND status = 'taken'
+        GROUP BY medication_id
+        """, arguments: ["userId": userId,
+                         "sevenDayStart": now - 7 * day,
+                         "thirtyDayStart": now - 30 * day])
     }
 
     /// Distinct local calendar days (profile tz) on which ANY dose was taken,
     /// newest first — the unbounded streak input for `calculateStreak` (§5.1.1).
     public static func distinctTakenLocalDatesNewestFirst(_ db: Database, userId: String,
-                                                          tz: String) throws -> [String] {
+                                                          tz: String) throws -> [String]
+    {
         try String.fetchAll(db, sql: """
-            SELECT DISTINCT localDate(taken_at, :tz) AS local_day
-            FROM dose_log
-            WHERE user_id = :userId AND status = 'taken'
-            ORDER BY local_day DESC
-            """, arguments: ["tz": tz, "userId": userId])
+        SELECT DISTINCT localDate(taken_at, :tz) AS local_day
+        FROM dose_log
+        WHERE user_id = :userId AND status = 'taken'
+        ORDER BY local_day DESC
+        """, arguments: ["tz": tz, "userId": userId])
     }
 }

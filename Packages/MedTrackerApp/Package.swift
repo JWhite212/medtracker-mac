@@ -21,7 +21,7 @@ let package = Package(
                 "MedTrackerSync",
                 .product(name: "GRDB", package: "GRDB.swift"),
             ],
-            swiftSettings: [.swiftLanguageMode(.v6)]   // ⇒ SWIFT_STRICT_CONCURRENCY complete
+            swiftSettings: [.swiftLanguageMode(.v6)] // ⇒ SWIFT_STRICT_CONCURRENCY complete
         ),
         .testTarget(
             name: "MedTrackerAppTests",
