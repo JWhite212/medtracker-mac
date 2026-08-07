@@ -8,6 +8,13 @@ import MedTrackerCore
 public struct MedicationPatternFill: View {
     public static let degradationThreshold: CGFloat = 20
 
+    /// Whether a swatch of this size renders the simplified gradient instead of
+    /// the full pattern geometry. Pure so the §6 threshold is verifiable without
+    /// pixel comparison (image snapshots drift across toolchain/OS releases).
+    public static func isDegraded(minDimension: CGFloat) -> Bool {
+        minDimension < degradationThreshold
+    }
+
     private let pattern: MedicationPattern
     private let colours: [Color]   // 1 or 2 entries, per renderedColours
 
@@ -23,8 +30,7 @@ public struct MedicationPatternFill: View {
 
     public var body: some View {
         GeometryReader { geo in
-            let minDim = min(geo.size.width, geo.size.height)
-            if minDim < Self.degradationThreshold {
+            if Self.isDegraded(minDimension: min(geo.size.width, geo.size.height)) {
                 degraded
             } else {
                 fullPattern(geo.size)
